@@ -1,0 +1,470 @@
+---
+title: "Modelos de deep learning"
+---
+
+# Importar librerías 
+
+``` {python}
+import pandas as pd
+import numpy as np
+
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import layers
+from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
+
+from sklearn.model_selection import GridSearchCV
+```
+
+# Importar datos
+
+``` {python}
+btc = pd.read_csv('data/btc_models.csv')
+
+btc
+```
+
+``` {python}
+btc.info()
+```
+
+``` {python}
+btc = btc.fillna(0)
+
+btc['Date'] = pd.to_datetime(btc['Date'], format='%Y-%m-%d')
+
+btc.info()
+```
+
+# Obtención de las series de tiempo y conjuntos de prueba, validación y entrenamiento
+
+``` {python}
+def split_dataset(df: pd.DataFrame, tau: int, column: str) -> list:
+    serie = df[column]
+    n = len(serie)
+    train_w = n - (tau * 3)
+    
+    X_train = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(tau, train_w)])
+    y_train = np.array(serie.iloc[tau:train_w].values.flatten()).reshape(-1, 1)
+
+    X_val = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(train_w, train_w + tau)])
+    y_val = np.array(serie.iloc[train_w:train_w + tau].values.flatten().tolist())
+
+    X_test = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(train_w + tau, train_w + (2 * tau))])
+    y_test = np.array(serie.iloc[train_w + tau:train_w + (2 * tau)].values.flatten().tolist())
+
+    return [X_train, y_train, X_val, y_val, X_test, y_test]
+```
+
+## Series de tiempo del precio
+
+``` {python}
+price_7 = split_dataset(btc, 7, 'Price')
+price_14 = split_dataset(btc, 14, 'Price')
+price_21 = split_dataset(btc, 21, 'Price')
+price_28 = split_dataset(btc, 28, 'Price')
+
+price = [price_7, price_14, price_21, price_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {price_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {price_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {price_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {price_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {price_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {price_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {price_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {price_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {price_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {price_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {price_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {price_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {price_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {price_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {price_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {price_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {price_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {price_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {price_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {price_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {price_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {price_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {price_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {price_28[5].shape}')
+```
+
+## Series de tiempo del retorno acumulado
+``` {python}
+at_7 = split_dataset(btc, 7, 'A_t')
+at_14 = split_dataset(btc, 14, 'A_t')
+at_21 = split_dataset(btc, 21, 'A_t')
+at_28 = split_dataset(btc, 28, 'A_t')
+
+at = [at_7, at_14, at_21, at_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {at_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {at_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {at_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {at_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {at_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {at_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {at_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {at_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {at_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {at_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {at_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {at_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {at_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {at_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {at_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {at_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {at_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {at_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {at_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {at_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {at_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {at_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {at_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {at_28[5].shape}')
+```
+
+## Series de tiempo de la volatilidad
+
+### Serie de tiempo de la volatidad para σ = 7
+``` {python}
+vol_7 = split_dataset(btc, 7, 'σ_7')
+vol_14 = split_dataset(btc, 14, 'σ_7')
+vol_21 = split_dataset(btc, 21, 'σ_7')
+vol_28 = split_dataset(btc, 28, 'σ_7')
+
+vo_7 = [vol_7, vol_14, vol_21, vol_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')
+```
+
+### Serie de tiempo de la volatidad para σ = 14
+``` {python}
+vol_7 = split_dataset(btc, 7, 'σ_14')
+vol_14 = split_dataset(btc, 14, 'σ_14')
+vol_21 = split_dataset(btc, 21, 'σ_14')
+vol_28 = split_dataset(btc, 28, 'σ_14')
+
+vo_14 = [vol_7, vol_14, vol_21, vol_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')
+```
+
+### Serie de tiempo de la volatidad para σ = 21
+``` {python}
+vol_7 = split_dataset(btc, 7, 'σ_21')
+vol_14 = split_dataset(btc, 14, 'σ_21')
+vol_21 = split_dataset(btc, 21, 'σ_21')
+vol_28 = split_dataset(btc, 28, 'σ_21')
+
+vo_21 = [vol_7, vol_14, vol_21, vol_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')
+```
+
+### Serie de tiempo de la volatidad para σ = 28
+``` {python}
+vol_7 = split_dataset(btc, 7, 'σ_7')
+vol_14 = split_dataset(btc, 14, 'σ_7')
+vol_21 = split_dataset(btc, 21, 'σ_7')
+vol_28 = split_dataset(btc, 28, 'σ_7')
+
+vo_28 = [vol_7, vol_14, vol_21, vol_28]
+
+print('τ = 7')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')
+
+print('\nτ = 14')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')
+
+print('\nτ = 21')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')
+
+print('\nτ = 28')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')
+print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')
+print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')
+print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')
+```
+
+# Visualización de los pliegues extraídos
+
+``` {python}
+def plot_folds(data: np.array, tau_v: list, name: str):
+    fig = go.Figure()
+
+    colors = {
+        'train': '#9B7EBD',
+        'validation': '#7AB2D3',
+        'test': '#CBD2A4'
+    }
+
+    for i, tau in enumerate(tau_v):
+        X_train_s, y_train_s = data[i][0].shape, data[i][1].shape
+        X_val_s, y_val_s = data[i][2].shape, data[i][3].shape
+        X_test_s, y_test_s = data[i][4].shape, data[i][5].shape
+
+        fig.add_trace(go.Scatter(
+            x=list(range(1, X_train_s[0] + 1)),
+            y=[i + 1] * X_train_s[0],
+            mode='lines',
+            line=dict(color=colors['train'], width=6),
+            name='Train' if i == 0 else "",
+            showlegend=(i == 0)
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=list(range(X_train_s[0] + 1, X_train_s[0] + X_val_s[0] + 1)),
+            y=[i + 1] * X_val_s[0],
+            mode='lines',
+            line=dict(color=colors['validation'], width=6),
+            name='Validation' if i == 0 else "",
+            showlegend=(i == 0)
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=list(range(X_train_s[0] + X_val_s[0] + 1, X_train_s[0] + X_val_s[0] + X_test_s[0] + 1)),
+            y=[i + 1] * X_test_s[0],
+            mode='lines',
+            line=dict(color=colors['test'], width=6),
+            name='Test' if i == 0 else "",
+            showlegend=(i == 0)
+        ))
+
+    fig.update_layout(
+        title=f"Visualización de pliegues para {name}",
+        xaxis_title="Índice de tiempo",
+        yaxis_title="Número de pliegue",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin={'b': 0, 'r': 30, 'l': 30, 't': 80},
+        plot_bgcolor='rgba(0, 0, 0, 0.0)',
+        paper_bgcolor='rgba(0, 0, 0, 0.0)',
+        font_color="white",
+        hoverlabel=dict(
+            bgcolor="#222"
+        ),
+        xaxis=dict(gridcolor='#222', tickfont=dict(color='white'), range = [4800, 5000]),
+        yaxis=dict(gridcolor='#222', tickfont=dict(color='white'), tickvals=[1, 2, 3, 4])
+    )
+
+    return fig
+```
+
+## Pliegues del precio
+
+``` {python}
+#| output: false
+tau_v = [7, 14, 21, 28]
+
+fig_p = plot_folds(price, tau_v, 'Price')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/price_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/price_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable del precio'
+>
+</iframe>
+```
+
+## Pliegues del retorno acumulado
+
+``` {python}
+#| output: false
+fig_p = plot_folds(price, tau_v, 'A_j')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/returncumsum_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/returncumsum_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable del retorno acumulado'
+>
+</iframe>
+```
+
+# Modelos de Deep Learning
+
+## Multilayer Perceptron Models (MLP)
+
+``` {python}
+def build_mlp(learning_rate=0.001, activation='relu'):
+    model = Sequential()
+    model.add(Dense(64, input_dim=X_train.shape[1], activation=activation))
+    model.add(Dense(32, activation=activation))
+    model.add(Dense(1, activation='linear'))
+    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse')
+    return model
+```
+
+``` {python}
+model = KerasRegressor(build_fn = build_mlp, verbose=0)
+
+param = {
+    'build_fn__learning_rate': [0.001, 0.01, 0.1, 0.2],
+    'build_fn__activation': ['relu', 'tanh', 'sigmoid'],
+    'epochs': [50, 100, 150]
+}
+
+grid = GridSearchCV(
+    estimator = model,
+    param_grid =param,
+    cv = 3,
+    verbose = 1
+)
+
+grid.fit(price[0], price[1], validation_data = (price[2], price[3]))
+```
+
+``` {python}
+best_params = grid.best_params_
+print(f'Mejor hiperparámetros: {best_params}')
+
+best_model = grid.best_estimator_
+test_loss, test_mae = best_model.model.evaluate(price[4], price[5])
+print(f'Loss en el conjunto de prueba: {test_loss}, MAE en el conjunto de prueba: {test_mae}')
+```

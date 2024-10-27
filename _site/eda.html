@@ -1,0 +1,2529 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es" xml:lang="es"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Jorge Borja">
+<meta name="author" content="Gabriela Díaz Porto">
+
+<title>Análisis exploratorio de los datos – Parcial Práctico Series de Tiempo</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./model.html" rel="next">
+<link href="./index.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "Sin resultados",
+    "search-matching-documents-text": "documentos encontrados",
+    "search-copy-link-title": "Copiar el enlace en la búsqueda",
+    "search-hide-matches-text": "Ocultar resultados adicionales",
+    "search-more-match-text": "resultado adicional en este documento",
+    "search-more-matches-text": "resultados adicionales en este documento",
+    "search-clear-button-title": "Borrar",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar",
+    "search-label": "Buscar"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script type="text/javascript">
+window.PlotlyConfig = {MathJaxConfig: 'local'};
+if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}
+if (typeof require !== 'undefined') {
+require.undef("plotly");
+requirejs.config({
+    paths: {
+        'plotly': ['https://cdn.plot.ly/plotly-2.35.2.min']
+    }
+});
+require(['plotly'], function(Plotly) {
+    window._Plotly = Plotly;
+});
+}
+</script>
+
+<link rel="apple-touch-icon" sizes="180x180" href="icon/apple-icon-180x180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icon/favicon-16x16.png">
+<link rel="mask-icon" href="icon/safari-pinned-tab.svg" color="#5bbad5">
+<meta name="msapplication-TileColor" content="#da532c">
+<meta name="theme-color" content="#ffffff">
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./eda.html">Análisis exploratorio de datos</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Alternar barra lateral" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Buscar" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Parcial Práctico Series de Tiempo</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Buscar"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Introducción</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./eda.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Análisis exploratorio de datos</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./model.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Modelos estadísticos</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./deep.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Modelos de deep learning</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">En esta página</h2>
+   
+  <ul>
+  <li><a href="#importar-librerías" id="toc-importar-librerías" class="nav-link active" data-scroll-target="#importar-librerías">Importar librerías</a></li>
+  <li><a href="#importar-datos" id="toc-importar-datos" class="nav-link" data-scroll-target="#importar-datos">Importar datos</a></li>
+  <li><a href="#datos-faltantes" id="toc-datos-faltantes" class="nav-link" data-scroll-target="#datos-faltantes">Datos faltantes</a></li>
+  <li><a href="#visualización-de-precio-y-volumen-tradeado" id="toc-visualización-de-precio-y-volumen-tradeado" class="nav-link" data-scroll-target="#visualización-de-precio-y-volumen-tradeado">Visualización de precio y volumen tradeado</a></li>
+  <li><a href="#visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" id="toc-visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" class="nav-link" data-scroll-target="#visualización-semanal-mensual-y-anual-del-precio-del-bitcoin">Visualización semanal, mensual y anual del precio del bitcoin</a></li>
+  <li><a href="#validación-de-estacionariedad-de-la-serie-de-tiempo" id="toc-validación-de-estacionariedad-de-la-serie-de-tiempo" class="nav-link" data-scroll-target="#validación-de-estacionariedad-de-la-serie-de-tiempo">Validación de estacionariedad de la serie de tiempo</a>
+  <ul class="collapse">
+  <li><a href="#prueba-de-estacionariedad-de-ljung-box" id="toc-prueba-de-estacionariedad-de-ljung-box" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-ljung-box">Prueba de estacionariedad de Ljung-Box</a></li>
+  <li><a href="#prueba-de-estacionariedad-de-dickey-fuller" id="toc-prueba-de-estacionariedad-de-dickey-fuller" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-dickey-fuller">Prueba de estacionariedad de Dickey Fuller</a></li>
+  <li><a href="#transformaciones-para-obtener-una-serie-estacionaria" id="toc-transformaciones-para-obtener-una-serie-estacionaria" class="nav-link" data-scroll-target="#transformaciones-para-obtener-una-serie-estacionaria">Transformaciones para obtener una serie estacionaria</a></li>
+  </ul></li>
+  <li><a href="#comportamiento-por-agrupaciones-de-la-serie-de-tiempo" id="toc-comportamiento-por-agrupaciones-de-la-serie-de-tiempo" class="nav-link" data-scroll-target="#comportamiento-por-agrupaciones-de-la-serie-de-tiempo">Comportamiento por agrupaciones de la serie de tiempo</a></li>
+  <li><a href="#medias-móviles-y-tendencia" id="toc-medias-móviles-y-tendencia" class="nav-link" data-scroll-target="#medias-móviles-y-tendencia">Medias móviles y tendencia</a>
+  <ul class="collapse">
+  <li><a href="#prueba-de-estacionariedad-de-ljung-box-1" id="toc-prueba-de-estacionariedad-de-ljung-box-1" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-ljung-box-1">Prueba de estacionariedad de Ljung-Box</a></li>
+  <li><a href="#prueba-de-estacionariedad-de-dickey-fuller-1" id="toc-prueba-de-estacionariedad-de-dickey-fuller-1" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-dickey-fuller-1">Prueba de estacionariedad de Dickey Fuller</a></li>
+  </ul></li>
+  <li><a href="#retorno-acumulado-diario-y-volatilidad" id="toc-retorno-acumulado-diario-y-volatilidad" class="nav-link" data-scroll-target="#retorno-acumulado-diario-y-volatilidad">Retorno acumulado diario y volatilidad</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Análisis exploratorio de los datos</h1>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Autores/as</div>
+  <div class="quarto-title-meta-heading">Afiliación</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author"><a href="https://www.linkedin.com/in/jorgeborjas25/">Jorge Borja, Mag</a> </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            <a href="https://uninorte.edu.co/">
+            Universidad del Norte
+            </a>
+          </p>
+      </div>
+    <div class="quarto-title-meta-contents">
+    <p class="author"><a href="https://www.linkedin.com/in/gabriela-diaz-porto-6a0729201">Gabriela Díaz Porto, Mag</a> </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="importar-librerías" class="level1">
+<h1>Importar librerías</h1>
+<div id="dfb4fde4" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.graph_objects <span class="im">as</span> go</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> plotly.subplots <span class="im">import</span> make_subplots</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.impute <span class="im">import</span> KNNImputer</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.tsa.seasonal <span class="im">import</span> seasonal_decompose</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.graphics.tsaplots <span class="im">import</span> plot_acf</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.tsa.stattools <span class="im">import</span> acf, adfuller</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.diagnostic <span class="im">import</span> acorr_ljungbox</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="importar-datos" class="level1">
+<h1>Importar datos</h1>
+<div id="53854406" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>btc <span class="op">=</span> pd.read_csv(<span class="st">'https://raw.githubusercontent.com/lihkir/Data/refs/heads/main/Bitcoin%20Historical%20Data.csv'</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>03/24/2024</td>
+<td>67,211.9</td>
+<td>64,036.5</td>
+<td>67,587.8</td>
+<td>63,812.9</td>
+<td>65.59K</td>
+<td>4.96%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>03/23/2024</td>
+<td>64,037.8</td>
+<td>63,785.6</td>
+<td>65,972.4</td>
+<td>63,074.9</td>
+<td>35.11K</td>
+<td>0.40%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>03/22/2024</td>
+<td>63,785.5</td>
+<td>65,501.5</td>
+<td>66,633.3</td>
+<td>62,328.3</td>
+<td>72.43K</td>
+<td>-2.62%</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>03/21/2024</td>
+<td>65,503.8</td>
+<td>67,860.0</td>
+<td>68,161.7</td>
+<td>64,616.1</td>
+<td>75.26K</td>
+<td>-3.46%</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>03/20/2024</td>
+<td>67,854.0</td>
+<td>62,046.8</td>
+<td>68,029.5</td>
+<td>60,850.9</td>
+<td>133.53K</td>
+<td>9.35%</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="4ba87707" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>btc.shape</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<pre><code>(4999, 7)</code></pre>
+</div>
+</div>
+<div id="2e71352c" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 4999 entries, 0 to 4998
+Data columns (total 7 columns):
+ #   Column    Non-Null Count  Dtype 
+---  ------    --------------  ----- 
+ 0   Date      4999 non-null   object
+ 1   Price     4999 non-null   object
+ 2   Open      4999 non-null   object
+ 3   High      4999 non-null   object
+ 4   Low       4999 non-null   object
+ 5   Vol.      4993 non-null   object
+ 6   Change %  4999 non-null   object
+dtypes: object(7)
+memory usage: 273.5+ KB</code></pre>
+</div>
+</div>
+<div id="633deddf" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]] <span class="op">=</span> btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]].replace(<span class="st">','</span>, <span class="st">''</span>, regex<span class="op">=</span><span class="va">True</span>).astype(<span class="bu">float</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Change %'</span>] <span class="op">=</span> btc[<span class="st">'Change %'</span>].<span class="bu">str</span>.replace(<span class="st">'%'</span>, <span class="st">''</span>).astype(<span class="bu">float</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Date'</span>] <span class="op">=</span> pd.to_datetime(btc[<span class="st">'Date'</span>], <span class="bu">format</span><span class="op">=</span><span class="st">'%m/</span><span class="sc">%d</span><span class="st">/%Y'</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> convert_volume(vol):</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">isinstance</span>(vol, <span class="bu">str</span>):</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="st">'K'</span> <span class="kw">in</span> vol:</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="bu">float</span>(vol.replace(<span class="st">'K'</span>, <span class="st">''</span>).replace(<span class="st">','</span>, <span class="st">''</span>)) <span class="op">*</span> <span class="dv">1_000</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> <span class="st">'M'</span> <span class="kw">in</span> vol:</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="bu">float</span>(vol.replace(<span class="st">'M'</span>, <span class="st">''</span>).replace(<span class="st">','</span>, <span class="st">''</span>)) <span class="op">*</span> <span class="dv">1_000_000</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> <span class="st">'B'</span> <span class="kw">in</span> vol:</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="bu">float</span>(vol.replace(<span class="st">'B'</span>, <span class="st">''</span>).replace(<span class="st">','</span>, <span class="st">''</span>)) <span class="op">*</span> <span class="dv">1_000_000_000</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> <span class="bu">float</span>(vol.replace(<span class="st">','</span>, <span class="st">''</span>))</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> vol</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Vol.'</span>] <span class="op">=</span> btc[<span class="st">'Vol.'</span>].<span class="bu">apply</span>(convert_volume)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>2024-03-24</td>
+<td>67211.9</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>2024-03-23</td>
+<td>64037.8</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>2024-03-22</td>
+<td>63785.5</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>2024-03-21</td>
+<td>65503.8</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>2024-03-20</td>
+<td>67854.0</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="c222abcb" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 4999 entries, 0 to 4998
+Data columns (total 7 columns):
+ #   Column    Non-Null Count  Dtype         
+---  ------    --------------  -----         
+ 0   Date      4999 non-null   datetime64[ns]
+ 1   Price     4999 non-null   float64       
+ 2   Open      4999 non-null   float64       
+ 3   High      4999 non-null   float64       
+ 4   Low       4999 non-null   float64       
+ 5   Vol.      4993 non-null   float64       
+ 6   Change %  4999 non-null   float64       
+dtypes: datetime64[ns](1), float64(6)
+memory usage: 273.5 KB</code></pre>
+</div>
+</div>
+<div id="627ee7f9" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>btc.describe()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">count</td>
+<td>4999</td>
+<td>4999.000000</td>
+<td>4999.000000</td>
+<td>4999.000000</td>
+<td>4999.000000</td>
+<td>4.993000e+03</td>
+<td>4999.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">mean</td>
+<td>2017-05-21 00:00:00</td>
+<td>10812.283337</td>
+<td>10798.901840</td>
+<td>11067.453051</td>
+<td>10511.891198</td>
+<td>1.237685e+07</td>
+<td>0.415751</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">min</td>
+<td>2010-07-18 00:00:00</td>
+<td>0.100000</td>
+<td>0.000000</td>
+<td>0.100000</td>
+<td>0.000000</td>
+<td>8.000000e+01</td>
+<td>-57.210000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">25%</td>
+<td>2013-12-18 12:00:00</td>
+<td>226.700000</td>
+<td>226.450000</td>
+<td>231.400000</td>
+<td>221.950000</td>
+<td>3.185000e+04</td>
+<td>-1.170000</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">50%</td>
+<td>2017-05-21 00:00:00</td>
+<td>1975.100000</td>
+<td>1962.000000</td>
+<td>2048.400000</td>
+<td>1875.300000</td>
+<td>6.877000e+04</td>
+<td>0.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">75%</td>
+<td>2020-10-21 12:00:00</td>
+<td>15450.150000</td>
+<td>15372.150000</td>
+<td>15954.550000</td>
+<td>14557.200000</td>
+<td>1.855900e+05</td>
+<td>1.785000</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">max</td>
+<td>2024-03-24 00:00:00</td>
+<td>73066.300000</td>
+<td>73066.700000</td>
+<td>73740.900000</td>
+<td>71338.400000</td>
+<td>4.470000e+09</td>
+<td>336.840000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">std</td>
+<td>NaN</td>
+<td>15892.032468</td>
+<td>15872.785452</td>
+<td>16270.707594</td>
+<td>15444.928771</td>
+<td>1.549821e+08</td>
+<td>7.094771</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="datos-faltantes" class="level1">
+<h1>Datos faltantes</h1>
+<div id="c8c6e06d" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>missing_values <span class="op">=</span> btc.isnull().<span class="bu">sum</span>()</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>missing_percentage <span class="op">=</span> <span class="bu">round</span>((missing_values <span class="op">/</span> <span class="bu">len</span>(btc)) <span class="op">*</span> <span class="dv">100</span>, <span class="dv">4</span>)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>missing_percentage</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<pre><code>Date        0.00
+Price       0.00
+Open        0.00
+High        0.00
+Low         0.00
+Vol.        0.12
+Change %    0.00
+dtype: float64</code></pre>
+</div>
+</div>
+<div id="fb2e7458" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>imputer <span class="op">=</span> KNNImputer(n_neighbors <span class="op">=</span> <span class="dv">5</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Vol.'</span>]] <span class="op">=</span> imputer.fit_transform(btc[[<span class="st">'Vol.'</span>]])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="visualización-de-precio-y-volumen-tradeado" class="level1">
+<h1>Visualización de precio y volumen tradeado</h1>
+<div id="0396748c" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> [</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        go.Candlestick(</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>            x <span class="op">=</span> btc[<span class="st">'Date'</span>],</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>            <span class="bu">open</span> <span class="op">=</span> btc[<span class="st">'Open'</span>],</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>            high <span class="op">=</span> btc[<span class="st">'High'</span>],</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>            low <span class="op">=</span> btc[<span class="st">'Low'</span>],</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>            close <span class="op">=</span> btc[<span class="st">'Price'</span>],</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>            name <span class="op">=</span> <span class="st">'Precio Bitcoin'</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">'Gráfico de Velas de Bitcoin'</span>,</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    xaxis_title<span class="op">=</span><span class="st">'Fecha'</span>,</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    yaxis_title<span class="op">=</span><span class="st">'Precio (USD)'</span>,</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    hovermode<span class="op">=</span><span class="st">'x'</span>,</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">40</span>},</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span>{<span class="st">'gridcolor'</span>: <span class="st">'#222'</span>, <span class="st">'tickfont'</span>: {<span class="st">'color'</span>: <span class="st">'white'</span>}},</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span>{<span class="st">'gridcolor'</span>: <span class="st">'#222'</span>, <span class="st">'tickfont'</span>: {<span class="st">'color'</span>: <span class="st">'white'</span>}},</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    xaxis_rangeslider_visible<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/candlestick_price.html" width="730" height="400" title="Candlestick de la serie de tiempo del precio">
+</iframe>
+<div id="3c08f32f" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    go.Histogram(</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> btc[<span class="st">'Date'</span>],</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> btc[<span class="st">'Vol.'</span>],</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        name <span class="op">=</span> <span class="st">'Volumen'</span>,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        histfunc <span class="op">=</span> <span class="st">'sum'</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">'Histograma de Volumen Tradeado Diario'</span>,</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>    xaxis_title<span class="op">=</span><span class="st">'Fecha'</span>,</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>    yaxis_title<span class="op">=</span><span class="st">'Volumen tradeado'</span>,</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>    bargap<span class="op">=</span><span class="fl">0.1</span>,</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">40</span>},</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span>{<span class="st">'gridcolor'</span>: <span class="st">'#222'</span>, <span class="st">'tickfont'</span>: {<span class="st">'color'</span>: <span class="st">'white'</span>}},</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span>{<span class="st">'gridcolor'</span>: <span class="st">'#222'</span>, <span class="st">'tickfont'</span>: {<span class="st">'color'</span>: <span class="st">'white'</span>}},</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/histogram_vol.html" width="730" height="400" title="Histograma del volumen de tradeado">
+</iframe>
+</section>
+<section id="visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" class="level1">
+<h1>Visualización semanal, mensual y anual del precio del bitcoin</h1>
+<div id="f178b458" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>btc_c <span class="op">=</span> btc.copy()</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>btc_c.set_index(<span class="st">'Date'</span>, inplace <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>weekly_btc <span class="op">=</span> btc_c.resample(<span class="st">'W'</span>).mean()</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>monthly_btc <span class="op">=</span> btc_c.resample(<span class="st">'M'</span>).mean()</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>yearly_btc <span class="op">=</span> btc_c.resample(<span class="st">'Y'</span>).mean()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="4abb7708" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fig_ts <span class="op">=</span> make_subplots(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">3</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    subplot_titles<span class="op">=</span>(</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Precio Promedio Semanal'</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Precio Promedio Mensual'</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Precio Promedio Anual'</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>fig_ts.add_trace(</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>weekly_btc.index, </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>weekly_btc[<span class="st">'Price'</span>], </span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines+markers'</span>, </span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Precio Semanal'</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>fig_ts.add_trace(</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>monthly_btc.index, </span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>monthly_btc[<span class="st">'Price'</span>], </span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines+markers'</span>, </span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Precio Mensual'</span></span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>fig_ts.add_trace(</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>yearly_btc.index, </span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>yearly_btc[<span class="st">'Price'</span>], </span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines+markers'</span>, </span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Precio Anual'</span></span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>fig_ts.update_layout(</span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">'Series de Tiempo Agrupadas (Semana, Mes, Año)'</span>,</span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>    xaxis_title<span class="op">=</span><span class="st">'Fecha'</span>,</span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a>    yaxis_title<span class="op">=</span><span class="st">'Precio (USD)'</span>,</span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb17-49"><a href="#cb17-49" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb17-50"><a href="#cb17-50" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb17-51"><a href="#cb17-51" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb17-52"><a href="#cb17-52" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-53"><a href="#cb17-53" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-54"><a href="#cb17-54" aria-hidden="true" tabindex="-1"></a>    xaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-55"><a href="#cb17-55" aria-hidden="true" tabindex="-1"></a>    yaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-56"><a href="#cb17-56" aria-hidden="true" tabindex="-1"></a>    xaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-57"><a href="#cb17-57" aria-hidden="true" tabindex="-1"></a>    yaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a>    hovermode <span class="op">=</span> <span class="st">'x unified'</span>,</span>
+<span id="cb17-59"><a href="#cb17-59" aria-hidden="true" tabindex="-1"></a>    showlegend <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb17-60"><a href="#cb17-60" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb17-61"><a href="#cb17-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-62"><a href="#cb17-62" aria-hidden="true" tabindex="-1"></a>fig_ts.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/ts_variety.html" width="700" height="800" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
+</iframe>
+<div id="60409d07" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Week'</span>] <span class="op">=</span> btc_c.index.to_series().dt.isocalendar().week</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Month'</span>] <span class="op">=</span> btc_c.index.to_series().dt.month</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Year'</span>] <span class="op">=</span> btc_c.index.to_series().dt.year</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="28489702" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_box(df: pd.DataFrame, X: <span class="bu">str</span>, Y: <span class="bu">str</span>, TITLE: <span class="bu">str</span>):</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.box(</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        df,</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> X,</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        y <span class="op">=</span> Y,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        title <span class="op">=</span> TITLE</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    fig.update_layout(</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>        margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>        plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>        font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>            bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>        xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>), title <span class="op">=</span> <span class="st">'Semana'</span>),</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>        yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>), title <span class="op">=</span> <span class="st">'Precio'</span>)</span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fig</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>fig_box_w <span class="op">=</span> get_box(btc_c, <span class="st">'Week'</span>, <span class="st">'Price'</span>, <span class="st">'Distribución semanal'</span>)</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>fig_box_m <span class="op">=</span> get_box(btc_c, <span class="st">'Month'</span>, <span class="st">'Price'</span>, <span class="st">'Distribución mensual'</span>)</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>fig_box_y <span class="op">=</span> get_box(btc_c, <span class="st">'Year'</span>, <span class="st">'Price'</span>, <span class="st">'Distribución anual'</span>)</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a>fig_box_w.show()</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>fig_box_m.show()</span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>fig_box_y.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/box_variety_w.html" width="730" height="400" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
+</iframe>
+<iframe src="graphs/box_variety_m.html" width="730" height="400" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
+</iframe>
+<iframe src="graphs/box_variety_y.html" width="730" height="400" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
+</iframe>
+</section>
+<section id="validación-de-estacionariedad-de-la-serie-de-tiempo" class="level1">
+<h1>Validación de estacionariedad de la serie de tiempo</h1>
+<div id="8121b690" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_c[<span class="st">'Price'</span>], nlags<span class="op">=</span><span class="dv">2000</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>fig.add_trace(go.Bar(</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="bu">list</span>(<span class="bu">range</span>(<span class="bu">len</span>(lag_acf))),</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>lag_acf,</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    marker_color<span class="op">=</span><span class="st">'blue'</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">'Autocorrelación'</span>,</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    xaxis_title<span class="op">=</span><span class="st">'Lags'</span>,</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    yaxis_title<span class="op">=</span><span class="st">'Autocorrelación'</span>,</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>))</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/acf_1.html" width="730" height="400" title="ACF de las diferencias estacionales">
+</iframe>
+<section id="prueba-de-estacionariedad-de-ljung-box" class="level2">
+<h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box">Prueba de estacionariedad de Ljung-Box</h2>
+<div id="75b47563" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_c[<span class="st">'Price'</span>], lags<span class="op">=</span>[<span class="dv">200</span>, <span class="dv">500</span>, <span class="dv">1000</span>, <span class="dv">2000</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags)."</span>)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie es estacionaria (no se rechaza la hipótesis nula para los lags evaluados)."</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>result</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags).</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="22">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">lb_stat</th>
+<th data-quarto-table-cell-role="th">lb_pvalue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">200</td>
+<td>6.937886e+05</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">500</td>
+<td>1.166338e+06</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1000</td>
+<td>1.598385e+06</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2000</td>
+<td>1.680488e+06</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="prueba-de-estacionariedad-de-dickey-fuller" class="level2">
+<h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller">Prueba de estacionariedad de Dickey Fuller</h2>
+<div id="93b8bed8" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_c[<span class="st">'Price'</span>])</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Valor p: </span><span class="sc">{</span>result[<span class="dv">1</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">'</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> result[<span class="dv">1</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>:</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie es estacionaria (rechazamos la hipótesis nula)."</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Estadístico de prueba: -2.685797950257258
+Valor p: 0.07652825121387279
+
+La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
+</div>
+</div>
+</section>
+<section id="transformaciones-para-obtener-una-serie-estacionaria" class="level2">
+<h2 class="anchored" data-anchor-id="transformaciones-para-obtener-una-serie-estacionaria">Transformaciones para obtener una serie estacionaria</h2>
+<div id="a5b642a1" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_c.copy()</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'Price'</span>] <span class="op">=</span> btc_c[<span class="st">'Price'</span>].diff()</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>btc_d</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="24">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+<th data-quarto-table-cell-role="th">Week</th>
+<th data-quarto-table-cell-role="th">Month</th>
+<th data-quarto-table-cell-role="th">Year</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td>NaN</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-23</td>
+<td>-3174.1</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-22</td>
+<td>-252.3</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-21</td>
+<td>1718.3</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-20</td>
+<td>2350.2</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-22</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2010-07-21</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-20</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2010-07-19</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-18</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.00</td>
+<td>28</td>
+<td>7</td>
+<td>2010</td>
+</tr>
+</tbody>
+</table>
+
+<p>4999 rows × 9 columns</p>
+</div>
+</div>
+</div>
+<div id="3d52e19e" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>result_diff <span class="op">=</span> adfuller(btc_d[<span class="st">'Price'</span>].dropna())</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result_diff[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Valor p: </span><span class="sc">{</span>result_diff[<span class="dv">1</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">'</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> result_diff[<span class="dv">1</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>:</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie diferenciada es estacionaria (rechazamos la hipótesis nula)."</span>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie diferenciada no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Estadístico de prueba: -10.472194066907878
+Valor p: 1.2757808100481514e-18
+
+La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="comportamiento-por-agrupaciones-de-la-serie-de-tiempo" class="level1">
+<h1>Comportamiento por agrupaciones de la serie de tiempo</h1>
+<div id="d8d83bf5" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>weekly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'W'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>daily <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'D'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>monthly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'M'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="5083a541" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'mu_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).mean()</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).std()</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'mu_30'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">30</span>).mean()</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_30'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">30</span>).std()</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'mu_90'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">90</span>).mean()</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_90'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">90</span>).std()</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>btc_d</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="27">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+<th data-quarto-table-cell-role="th">Week</th>
+<th data-quarto-table-cell-role="th">Month</th>
+<th data-quarto-table-cell-role="th">Year</th>
+<th data-quarto-table-cell-role="th">mu_7</th>
+<th data-quarto-table-cell-role="th">std_7</th>
+<th data-quarto-table-cell-role="th">mu_30</th>
+<th data-quarto-table-cell-role="th">std_30</th>
+<th data-quarto-table-cell-role="th">mu_90</th>
+<th data-quarto-table-cell-role="th">std_90</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td>NaN</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-23</td>
+<td>-3174.1</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-22</td>
+<td>-252.3</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-21</td>
+<td>1718.3</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-20</td>
+<td>2350.2</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-22</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2010-07-21</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-20</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2010-07-19</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-18</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.00</td>
+<td>28</td>
+<td>7</td>
+<td>2010</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>4999 rows × 15 columns</p>
+</div>
+</div>
+</div>
+<div id="1b5322dd" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_hist(df: pd.DataFrame, diff_: <span class="bu">int</span>, title: <span class="bu">str</span>):</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.histogram(</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        df[<span class="st">'Price'</span>].diff(diff_).dropna(),</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>        nbins <span class="op">=</span> <span class="dv">30</span>,</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>        title <span class="op">=</span> title</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>    fig.update_layout(</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>        margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>        plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>        paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>        font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>        hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>            bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>        xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>        yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>        showlegend <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> fig</span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>fig_7 <span class="op">=</span> get_hist(btc_d, <span class="dv">7</span>, <span class="st">'Distribución con lag = 7'</span>)</span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>fig_30 <span class="op">=</span> get_hist(btc_d, <span class="dv">30</span>, <span class="st">'Distribución con lag = 30'</span>)</span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>fig_90 <span class="op">=</span> get_hist(btc_d, <span class="dv">90</span>, <span class="st">'Distribución con lag = 90'</span>)</span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>fig_7.show()</span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>fig_30.show()</span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>fig_90.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/hist_7.html" width="730" height="400" title="Distribución con lag = 7">
+</iframe>
+<iframe src="graphs/hist_30.html" width="730" height="400" title="Distribución con lag = 30">
+</iframe>
+<iframe src="graphs/hist_90.html" width="730" height="400" title="Distribución con lag = 90">
+</iframe>
+</section>
+<section id="medias-móviles-y-tendencia" class="level1">
+<h1>Medias móviles y tendencia</h1>
+<div id="c8b2e5ab" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_d.fillna(<span class="dv">0</span>)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>MA2 <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">2</span>).mean()</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>TwoXMA2 <span class="op">=</span> MA2.rolling(window<span class="op">=</span><span class="dv">2</span>).mean()</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>MA4 <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">4</span>).mean()</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>TwoXMA4 <span class="op">=</span> MA4.rolling(window<span class="op">=</span><span class="dv">2</span>).mean()</span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>MA3 <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">3</span>).mean()</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>ThreeXMA3 <span class="op">=</span> MA3.rolling(window<span class="op">=</span><span class="dv">3</span>).mean()</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> make_subplots(</span>
+<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">3</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
+<span id="cb31-14"><a href="#cb31-14" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
+<span id="cb31-15"><a href="#cb31-15" aria-hidden="true" tabindex="-1"></a>    subplot_titles<span class="op">=</span>(<span class="st">"2 day MA &amp; 2X2 day MA"</span>, <span class="st">"4 day MA &amp; 2X4 day MA"</span>, <span class="st">"3 day MA &amp; 3X3 day MA"</span>)</span>
+<span id="cb31-16"><a href="#cb31-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-17"><a href="#cb31-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-18"><a href="#cb31-18" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-19"><a href="#cb31-19" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-20"><a href="#cb31-20" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-21"><a href="#cb31-21" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>btc_d[<span class="st">'Price'</span>].iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-22"><a href="#cb31-22" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-23"><a href="#cb31-23" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Close Price'</span>, </span>
+<span id="cb31-24"><a href="#cb31-24" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>)</span>
+<span id="cb31-25"><a href="#cb31-25" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-26"><a href="#cb31-26" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-27"><a href="#cb31-27" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-28"><a href="#cb31-28" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-29"><a href="#cb31-29" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-30"><a href="#cb31-30" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-31"><a href="#cb31-31" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>MA2.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-32"><a href="#cb31-32" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-33"><a href="#cb31-33" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'2 day MA'</span>, </span>
+<span id="cb31-34"><a href="#cb31-34" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#7AB2D3'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-35"><a href="#cb31-35" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-36"><a href="#cb31-36" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-37"><a href="#cb31-37" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-38"><a href="#cb31-38" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-39"><a href="#cb31-39" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-40"><a href="#cb31-40" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-41"><a href="#cb31-41" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>TwoXMA2.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-42"><a href="#cb31-42" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-43"><a href="#cb31-43" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'2X2 day MA'</span>, </span>
+<span id="cb31-44"><a href="#cb31-44" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#CBD2A4'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-45"><a href="#cb31-45" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-46"><a href="#cb31-46" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-47"><a href="#cb31-47" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-48"><a href="#cb31-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-49"><a href="#cb31-49" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-50"><a href="#cb31-50" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-51"><a href="#cb31-51" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-52"><a href="#cb31-52" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>btc_d[<span class="st">'Price'</span>].iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-53"><a href="#cb31-53" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-54"><a href="#cb31-54" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Close Price'</span>, </span>
+<span id="cb31-55"><a href="#cb31-55" aria-hidden="true" tabindex="-1"></a>        showlegend<span class="op">=</span><span class="va">False</span>, </span>
+<span id="cb31-56"><a href="#cb31-56" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>)</span>
+<span id="cb31-57"><a href="#cb31-57" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-58"><a href="#cb31-58" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-59"><a href="#cb31-59" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-60"><a href="#cb31-60" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-61"><a href="#cb31-61" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-62"><a href="#cb31-62" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-63"><a href="#cb31-63" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>MA4.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-64"><a href="#cb31-64" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-65"><a href="#cb31-65" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'4 day MA'</span>, </span>
+<span id="cb31-66"><a href="#cb31-66" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#7AB2D3'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-67"><a href="#cb31-67" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-68"><a href="#cb31-68" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-69"><a href="#cb31-69" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-70"><a href="#cb31-70" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-71"><a href="#cb31-71" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-72"><a href="#cb31-72" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-73"><a href="#cb31-73" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>TwoXMA4.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-74"><a href="#cb31-74" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-75"><a href="#cb31-75" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'2X4 day MA'</span>, </span>
+<span id="cb31-76"><a href="#cb31-76" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#CBD2A4'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-77"><a href="#cb31-77" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-78"><a href="#cb31-78" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-79"><a href="#cb31-79" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-80"><a href="#cb31-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-81"><a href="#cb31-81" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-82"><a href="#cb31-82" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-83"><a href="#cb31-83" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-84"><a href="#cb31-84" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>btc_d[<span class="st">'Price'</span>].iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-85"><a href="#cb31-85" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-86"><a href="#cb31-86" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Close Price'</span>, </span>
+<span id="cb31-87"><a href="#cb31-87" aria-hidden="true" tabindex="-1"></a>        showlegend<span class="op">=</span><span class="va">False</span>, </span>
+<span id="cb31-88"><a href="#cb31-88" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>)</span>
+<span id="cb31-89"><a href="#cb31-89" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-90"><a href="#cb31-90" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-91"><a href="#cb31-91" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-92"><a href="#cb31-92" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-93"><a href="#cb31-93" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-94"><a href="#cb31-94" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-95"><a href="#cb31-95" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>MA3.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-96"><a href="#cb31-96" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-97"><a href="#cb31-97" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'3 day MA'</span>, </span>
+<span id="cb31-98"><a href="#cb31-98" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#7AB2D3'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-99"><a href="#cb31-99" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-100"><a href="#cb31-100" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-101"><a href="#cb31-101" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-102"><a href="#cb31-102" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb31-103"><a href="#cb31-103" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb31-104"><a href="#cb31-104" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index[:<span class="dv">45</span>], </span>
+<span id="cb31-105"><a href="#cb31-105" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>ThreeXMA3.iloc[:<span class="dv">45</span>], </span>
+<span id="cb31-106"><a href="#cb31-106" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb31-107"><a href="#cb31-107" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'3X3 day MA'</span>, </span>
+<span id="cb31-108"><a href="#cb31-108" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#CBD2A4'</span>, dash<span class="op">=</span><span class="st">'dash'</span>)</span>
+<span id="cb31-109"><a href="#cb31-109" aria-hidden="true" tabindex="-1"></a>    ), </span>
+<span id="cb31-110"><a href="#cb31-110" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb31-111"><a href="#cb31-111" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-112"><a href="#cb31-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-113"><a href="#cb31-113" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb31-114"><a href="#cb31-114" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">''</span>,</span>
+<span id="cb31-115"><a href="#cb31-115" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb31-116"><a href="#cb31-116" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb31-117"><a href="#cb31-117" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb31-118"><a href="#cb31-118" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb31-119"><a href="#cb31-119" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-120"><a href="#cb31-120" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb31-121"><a href="#cb31-121" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-122"><a href="#cb31-122" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-123"><a href="#cb31-123" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-124"><a href="#cb31-124" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-125"><a href="#cb31-125" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-126"><a href="#cb31-126" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-127"><a href="#cb31-127" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-128"><a href="#cb31-128" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-129"><a href="#cb31-129" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-130"><a href="#cb31-130" aria-hidden="true" tabindex="-1"></a>    xaxis2<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-131"><a href="#cb31-131" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-132"><a href="#cb31-132" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-133"><a href="#cb31-133" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-134"><a href="#cb31-134" aria-hidden="true" tabindex="-1"></a>    yaxis2<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-135"><a href="#cb31-135" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-136"><a href="#cb31-136" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-137"><a href="#cb31-137" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-138"><a href="#cb31-138" aria-hidden="true" tabindex="-1"></a>    xaxis3<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-139"><a href="#cb31-139" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-140"><a href="#cb31-140" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-141"><a href="#cb31-141" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-142"><a href="#cb31-142" aria-hidden="true" tabindex="-1"></a>    yaxis3<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb31-143"><a href="#cb31-143" aria-hidden="true" tabindex="-1"></a>        gridcolor<span class="op">=</span><span class="st">'#222'</span>, </span>
+<span id="cb31-144"><a href="#cb31-144" aria-hidden="true" tabindex="-1"></a>        tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb31-145"><a href="#cb31-145" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb31-146"><a href="#cb31-146" aria-hidden="true" tabindex="-1"></a>    hovermode<span class="op">=</span><span class="st">'x unified'</span>,</span>
+<span id="cb31-147"><a href="#cb31-147" aria-hidden="true" tabindex="-1"></a>    showlegend<span class="op">=</span><span class="va">False</span></span>
+<span id="cb31-148"><a href="#cb31-148" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb31-149"><a href="#cb31-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-150"><a href="#cb31-150" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/media_movil.html" width="730" height="800" title="Distribución con lag = 7">
+</iframe>
+<div id="92d0b39d" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    btc_d[<span class="st">'Price'</span>], </span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    period<span class="op">=</span><span class="dv">180</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> make_subplots(</span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">4</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>    subplot_titles<span class="op">=</span>(<span class="st">"Observado"</span>, <span class="st">"Tendencia"</span>, <span class="st">"Estacionalidad"</span>, <span class="st">"Residual"</span>)</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index, </span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>btc_d[<span class="st">'Price'</span>], </span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Observado'</span>, </span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index, </span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.trend, </span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Tendencia'</span>, </span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb32-37"><a href="#cb32-37" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index, </span>
+<span id="cb32-38"><a href="#cb32-38" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.seasonal, </span>
+<span id="cb32-39"><a href="#cb32-39" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb32-40"><a href="#cb32-40" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Estacionalidad'</span>, </span>
+<span id="cb32-41"><a href="#cb32-41" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb32-42"><a href="#cb32-42" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb32-43"><a href="#cb32-43" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb32-44"><a href="#cb32-44" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-45"><a href="#cb32-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-46"><a href="#cb32-46" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb32-47"><a href="#cb32-47" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb32-48"><a href="#cb32-48" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_d.index, </span>
+<span id="cb32-49"><a href="#cb32-49" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.resid, </span>
+<span id="cb32-50"><a href="#cb32-50" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb32-51"><a href="#cb32-51" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Residual'</span>, </span>
+<span id="cb32-52"><a href="#cb32-52" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb32-53"><a href="#cb32-53" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb32-54"><a href="#cb32-54" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">4</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb32-55"><a href="#cb32-55" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-56"><a href="#cb32-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-57"><a href="#cb32-57" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb32-58"><a href="#cb32-58" aria-hidden="true" tabindex="-1"></a>    title_text<span class="op">=</span><span class="st">"Descomposición Estacional de la Serie de Tiempo"</span>, </span>
+<span id="cb32-59"><a href="#cb32-59" aria-hidden="true" tabindex="-1"></a>    showlegend<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb32-60"><a href="#cb32-60" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb32-61"><a href="#cb32-61" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb32-62"><a href="#cb32-62" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb32-63"><a href="#cb32-63" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb32-64"><a href="#cb32-64" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb32-65"><a href="#cb32-65" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb32-66"><a href="#cb32-66" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb32-67"><a href="#cb32-67" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-68"><a href="#cb32-68" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-69"><a href="#cb32-69" aria-hidden="true" tabindex="-1"></a>    xaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-70"><a href="#cb32-70" aria-hidden="true" tabindex="-1"></a>    yaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-71"><a href="#cb32-71" aria-hidden="true" tabindex="-1"></a>    xaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-72"><a href="#cb32-72" aria-hidden="true" tabindex="-1"></a>    yaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-73"><a href="#cb32-73" aria-hidden="true" tabindex="-1"></a>    xaxis4<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-74"><a href="#cb32-74" aria-hidden="true" tabindex="-1"></a>    yaxis4<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb32-75"><a href="#cb32-75" aria-hidden="true" tabindex="-1"></a>    hovermode <span class="op">=</span> <span class="st">'x unified'</span>,</span>
+<span id="cb32-76"><a href="#cb32-76" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb32-77"><a href="#cb32-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-78"><a href="#cb32-78" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/descomposition.html" width="730" height="800" title="Distribución con lag = 7">
+</iframe>
+<div id="2206cb97" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_d.copy()</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>btc_ma[<span class="st">'Price_adj'</span>] <span class="op">=</span> btc_ma[<span class="st">'Price'</span>] <span class="op">-</span> TwoXMA4</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_ma.fillna(<span class="dv">0</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="80deac2e" class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    btc_ma[<span class="st">'Price_adj'</span>], </span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>    period<span class="op">=</span><span class="dv">180</span></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> make_subplots(</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">4</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    subplot_titles<span class="op">=</span>(<span class="st">"Observado"</span>, <span class="st">"Tendencia"</span>, <span class="st">"Estacionalidad"</span>, <span class="st">"Residual"</span>)</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_ma.index, </span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>btc_ma[<span class="st">'Price_adj'</span>], </span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Observado'</span>, </span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">1</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb34-25"><a href="#cb34-25" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb34-26"><a href="#cb34-26" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_ma.index, </span>
+<span id="cb34-27"><a href="#cb34-27" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.trend, </span>
+<span id="cb34-28"><a href="#cb34-28" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb34-29"><a href="#cb34-29" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Tendencia'</span>, </span>
+<span id="cb34-30"><a href="#cb34-30" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb34-31"><a href="#cb34-31" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb34-32"><a href="#cb34-32" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">2</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb34-33"><a href="#cb34-33" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-34"><a href="#cb34-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-35"><a href="#cb34-35" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb34-36"><a href="#cb34-36" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb34-37"><a href="#cb34-37" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_ma.index, </span>
+<span id="cb34-38"><a href="#cb34-38" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.seasonal, </span>
+<span id="cb34-39"><a href="#cb34-39" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb34-40"><a href="#cb34-40" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Estacionalidad'</span>, </span>
+<span id="cb34-41"><a href="#cb34-41" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb34-42"><a href="#cb34-42" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb34-43"><a href="#cb34-43" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">3</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb34-44"><a href="#cb34-44" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-45"><a href="#cb34-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-46"><a href="#cb34-46" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
+<span id="cb34-47"><a href="#cb34-47" aria-hidden="true" tabindex="-1"></a>    go.Scatter(</span>
+<span id="cb34-48"><a href="#cb34-48" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span>btc_ma.index, </span>
+<span id="cb34-49"><a href="#cb34-49" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span>decomposition.resid, </span>
+<span id="cb34-50"><a href="#cb34-50" aria-hidden="true" tabindex="-1"></a>        mode<span class="op">=</span><span class="st">'lines'</span>, </span>
+<span id="cb34-51"><a href="#cb34-51" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">'Residual'</span>, </span>
+<span id="cb34-52"><a href="#cb34-52" aria-hidden="true" tabindex="-1"></a>        line<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'#9B7EBD'</span>, width<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb34-53"><a href="#cb34-53" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb34-54"><a href="#cb34-54" aria-hidden="true" tabindex="-1"></a>    row<span class="op">=</span><span class="dv">4</span>, col<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb34-55"><a href="#cb34-55" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-56"><a href="#cb34-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-57"><a href="#cb34-57" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb34-58"><a href="#cb34-58" aria-hidden="true" tabindex="-1"></a>    title_text<span class="op">=</span><span class="st">"Descomposición Estacional de la Serie de Tiempo"</span>, </span>
+<span id="cb34-59"><a href="#cb34-59" aria-hidden="true" tabindex="-1"></a>    showlegend<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb34-60"><a href="#cb34-60" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb34-61"><a href="#cb34-61" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb34-62"><a href="#cb34-62" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb34-63"><a href="#cb34-63" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb34-64"><a href="#cb34-64" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb34-65"><a href="#cb34-65" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb34-66"><a href="#cb34-66" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb34-67"><a href="#cb34-67" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-68"><a href="#cb34-68" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-69"><a href="#cb34-69" aria-hidden="true" tabindex="-1"></a>    xaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-70"><a href="#cb34-70" aria-hidden="true" tabindex="-1"></a>    yaxis2<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-71"><a href="#cb34-71" aria-hidden="true" tabindex="-1"></a>    xaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-72"><a href="#cb34-72" aria-hidden="true" tabindex="-1"></a>    yaxis3<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-73"><a href="#cb34-73" aria-hidden="true" tabindex="-1"></a>    xaxis4<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-74"><a href="#cb34-74" aria-hidden="true" tabindex="-1"></a>    yaxis4<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb34-75"><a href="#cb34-75" aria-hidden="true" tabindex="-1"></a>    hovermode <span class="op">=</span> <span class="st">'x unified'</span>,</span>
+<span id="cb34-76"><a href="#cb34-76" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb34-77"><a href="#cb34-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-78"><a href="#cb34-78" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/descomposition_2.html" width="730" height="800" title="Distribución con lag = 7">
+</iframe>
+<section id="prueba-de-estacionariedad-de-ljung-box-1" class="level2">
+<h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box-1">Prueba de estacionariedad de Ljung-Box</h2>
+<div id="c1b69a16" class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_ma[<span class="st">'Price_adj'</span>], lags<span class="op">=</span>[<span class="dv">24</span>, <span class="dv">100</span>, <span class="dv">200</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags)."</span>)</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie es estacionaria (no se rechaza la hipótesis nula para los lags evaluados)."</span>)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>result</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags).</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="37">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">lb_stat</th>
+<th data-quarto-table-cell-role="th">lb_pvalue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">24</td>
+<td>417.732848</td>
+<td>1.703098e-73</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">100</td>
+<td>855.651535</td>
+<td>2.501987e-120</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">200</td>
+<td>1256.319601</td>
+<td>2.027382e-152</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</section>
+<section id="prueba-de-estacionariedad-de-dickey-fuller-1" class="level2">
+<h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller-1">Prueba de estacionariedad de Dickey Fuller</h2>
+<div id="3697e9da" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_ma[<span class="st">'Price_adj'</span>])</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Valor p: </span><span class="sc">{</span>result[<span class="dv">1</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">'</span>)</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> result[<span class="dv">1</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>:</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie es estacionaria (rechazamos la hipótesis nula)."</span>)</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Estadístico de prueba: -21.518148825437752
+Valor p: 0.0
+
+La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
+</div>
+</div>
+<div id="d0f3c0eb" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_ma[<span class="st">'Price_adj'</span>], nlags<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>fig.add_trace(go.Bar(</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="bu">list</span>(<span class="bu">range</span>(<span class="bu">len</span>(lag_acf))),</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>lag_acf,</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>    marker_color<span class="op">=</span><span class="st">'blue'</span></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">'Autocorrelación'</span>,</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>    xaxis_title<span class="op">=</span><span class="st">'Lags'</span>,</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>    yaxis_title<span class="op">=</span><span class="st">'Autocorrelación'</span>,</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span>{<span class="st">'b'</span>: <span class="dv">0</span>, <span class="st">'r'</span>: <span class="dv">30</span>, <span class="st">'l'</span>: <span class="dv">30</span>, <span class="st">'t'</span>: <span class="dv">80</span>},</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>    plot_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>    paper_bgcolor<span class="op">=</span><span class="st">'rgba(0, 0, 0, 0.0)'</span>,</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>    font_color<span class="op">=</span><span class="st">"white"</span>,</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>    hoverlabel<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>        bgcolor<span class="op">=</span><span class="st">"#222"</span></span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>    xaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>)),</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>    yaxis<span class="op">=</span><span class="bu">dict</span>(gridcolor<span class="op">=</span><span class="st">'#222'</span>, tickfont<span class="op">=</span><span class="bu">dict</span>(color<span class="op">=</span><span class="st">'white'</span>))</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<iframe src="graphs/acf_2.html" width="730" height="400" title="ACF de las diferencias estacionales">
+</iframe>
+</section>
+</section>
+<section id="retorno-acumulado-diario-y-volatilidad" class="level1">
+<h1>Retorno acumulado diario y volatilidad</h1>
+<div id="716ee0e3" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'R_j'</span>] <span class="op">=</span> btc[<span class="st">'Price'</span>].pct_change()</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'A_t'</span>] <span class="op">=</span> btc[<span class="st">'R_j'</span>].cumsum()</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_volt(btc: pd.DataFrame, window: <span class="bu">int</span>):</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> btc[<span class="st">'R_j'</span>].rolling(window <span class="op">=</span> window).std()</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>ws <span class="op">=</span> [<span class="dv">7</span>, <span class="dv">14</span>, <span class="dv">21</span>, <span class="dv">28</span>]</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> w <span class="kw">in</span> ws:</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    btc[<span class="ss">f'σ_</span><span class="sc">{</span>w<span class="sc">}</span><span class="ss">'</span>] <span class="op">=</span> calc_volt(btc, w)</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>btc</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="41">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+<th data-quarto-table-cell-role="th">R_j</th>
+<th data-quarto-table-cell-role="th">A_t</th>
+<th data-quarto-table-cell-role="th">σ_7</th>
+<th data-quarto-table-cell-role="th">σ_14</th>
+<th data-quarto-table-cell-role="th">σ_21</th>
+<th data-quarto-table-cell-role="th">σ_28</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>2024-03-24</td>
+<td>67211.9</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>2024-03-23</td>
+<td>64037.8</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>-0.047225</td>
+<td>-0.047225</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>2024-03-22</td>
+<td>63785.5</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>-0.003940</td>
+<td>-0.051165</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>2024-03-21</td>
+<td>65503.8</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>0.026939</td>
+<td>-0.024226</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>2024-03-20</td>
+<td>67854.0</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>0.035879</td>
+<td>0.011652</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4994</td>
+<td>2010-07-22</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>-4.322978</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4995</td>
+<td>2010-07-21</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>-4.322978</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4996</td>
+<td>2010-07-20</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>-4.322978</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4997</td>
+<td>2010-07-19</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>-4.322978</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4998</td>
+<td>2010-07-18</td>
+<td>0.1</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>-4.322978</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>4999 rows × 13 columns</p>
+</div>
+</div>
+</div>
+<div id="f6b296af" class="cell" data-execution_count="42">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>btc.to_csv(<span class="st">'data/btc_models.csv'</span>, index <span class="op">=</span> <span class="va">False</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copiado");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copiado");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./index.html" class="pagination-link" aria-label="Introducción">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Introducción</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./model.html" class="pagination-link" aria-label="Modelos estadísticos">
+        <span class="nav-page-text">Modelos estadísticos</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

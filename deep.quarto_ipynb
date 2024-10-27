@@ -1,0 +1,691 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Modelos de deep learning\"\n",
+        "---\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "# Importar librerías \n"
+      ],
+      "id": "bc34c557"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "\n",
+        "import plotly.graph_objects as go\n",
+        "import plotly.express as px\n",
+        "from plotly.subplots import make_subplots\n",
+        "\n",
+        "from tensorflow.keras.models import Sequential\n",
+        "from tensorflow.keras.layers import Dense\n",
+        "from tensorflow.keras.optimizers import Adam\n",
+        "from tensorflow.keras import layers\n",
+        "from tensorflow.keras.wrappers.scikit_learn import KerasRegressor\n",
+        "\n",
+        "from sklearn.model_selection import GridSearchCV"
+      ],
+      "id": "d05c51b1",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Importar datos\n"
+      ],
+      "id": "4e0f7b66"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "btc = pd.read_csv('data/btc_models.csv')\n",
+        "\n",
+        "btc"
+      ],
+      "id": "2f875788",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "btc.info()"
+      ],
+      "id": "ec06b131",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "btc = btc.fillna(0)\n",
+        "\n",
+        "btc['Date'] = pd.to_datetime(btc['Date'], format='%Y-%m-%d')\n",
+        "\n",
+        "btc.info()"
+      ],
+      "id": "9f1de757",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Obtención de las series de tiempo y conjuntos de prueba, validación y entrenamiento\n"
+      ],
+      "id": "0efcbf89"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def split_dataset(df: pd.DataFrame, tau: int, column: str) -> list:\n",
+        "    serie = df[column]\n",
+        "    n = len(serie)\n",
+        "    train_w = n - (tau * 3)\n",
+        "    \n",
+        "    X_train = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(tau, train_w)])\n",
+        "    y_train = np.array(serie.iloc[tau:train_w].values.flatten()).reshape(-1, 1)\n",
+        "\n",
+        "    X_val = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(train_w, train_w + tau)])\n",
+        "    y_val = np.array(serie.iloc[train_w:train_w + tau].values.flatten().tolist())\n",
+        "\n",
+        "    X_test = np.array([serie.iloc[i - tau:i].values.flatten() for i in range(train_w + tau, train_w + (2 * tau))])\n",
+        "    y_test = np.array(serie.iloc[train_w + tau:train_w + (2 * tau)].values.flatten().tolist())\n",
+        "\n",
+        "    return [X_train, y_train, X_val, y_val, X_test, y_test]"
+      ],
+      "id": "aab0ff0c",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Series de tiempo del precio\n"
+      ],
+      "id": "23083384"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "price_7 = split_dataset(btc, 7, 'Price')\n",
+        "price_14 = split_dataset(btc, 14, 'Price')\n",
+        "price_21 = split_dataset(btc, 21, 'Price')\n",
+        "price_28 = split_dataset(btc, 28, 'Price')\n",
+        "\n",
+        "price = [price_7, price_14, price_21, price_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {price_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {price_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {price_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {price_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {price_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {price_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {price_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {price_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {price_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {price_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {price_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {price_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {price_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {price_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {price_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {price_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {price_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {price_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {price_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {price_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {price_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {price_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {price_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {price_28[5].shape}')"
+      ],
+      "id": "471bfbc3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Series de tiempo del retorno acumulado\n"
+      ],
+      "id": "830cbd1c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "at_7 = split_dataset(btc, 7, 'A_t')\n",
+        "at_14 = split_dataset(btc, 14, 'A_t')\n",
+        "at_21 = split_dataset(btc, 21, 'A_t')\n",
+        "at_28 = split_dataset(btc, 28, 'A_t')\n",
+        "\n",
+        "at = [at_7, at_14, at_21, at_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {at_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {at_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {at_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {at_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {at_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {at_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {at_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {at_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {at_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {at_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {at_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {at_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {at_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {at_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {at_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {at_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {at_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {at_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {at_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {at_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {at_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {at_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {at_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {at_28[5].shape}')"
+      ],
+      "id": "604f15aa",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Series de tiempo de la volatilidad\n",
+        "\n",
+        "### Serie de tiempo de la volatidad para σ = 7\n"
+      ],
+      "id": "783620a7"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "vol_7 = split_dataset(btc, 7, 'σ_7')\n",
+        "vol_14 = split_dataset(btc, 14, 'σ_7')\n",
+        "vol_21 = split_dataset(btc, 21, 'σ_7')\n",
+        "vol_28 = split_dataset(btc, 28, 'σ_7')\n",
+        "\n",
+        "vo_7 = [vol_7, vol_14, vol_21, vol_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')"
+      ],
+      "id": "3dc91495",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Serie de tiempo de la volatidad para σ = 14\n"
+      ],
+      "id": "367f3f6b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "vol_7 = split_dataset(btc, 7, 'σ_14')\n",
+        "vol_14 = split_dataset(btc, 14, 'σ_14')\n",
+        "vol_21 = split_dataset(btc, 21, 'σ_14')\n",
+        "vol_28 = split_dataset(btc, 28, 'σ_14')\n",
+        "\n",
+        "vo_14 = [vol_7, vol_14, vol_21, vol_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')"
+      ],
+      "id": "3a55229e",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Serie de tiempo de la volatidad para σ = 21\n"
+      ],
+      "id": "e5570be1"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "vol_7 = split_dataset(btc, 7, 'σ_21')\n",
+        "vol_14 = split_dataset(btc, 14, 'σ_21')\n",
+        "vol_21 = split_dataset(btc, 21, 'σ_21')\n",
+        "vol_28 = split_dataset(btc, 28, 'σ_21')\n",
+        "\n",
+        "vo_21 = [vol_7, vol_14, vol_21, vol_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')"
+      ],
+      "id": "06681567",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Serie de tiempo de la volatidad para σ = 28\n"
+      ],
+      "id": "cccc098d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "vol_7 = split_dataset(btc, 7, 'σ_7')\n",
+        "vol_14 = split_dataset(btc, 14, 'σ_7')\n",
+        "vol_21 = split_dataset(btc, 21, 'σ_7')\n",
+        "vol_28 = split_dataset(btc, 28, 'σ_7')\n",
+        "\n",
+        "vo_28 = [vol_7, vol_14, vol_21, vol_28]\n",
+        "\n",
+        "print('τ = 7')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en X: {vol_7[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 7 en y: {vol_7[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en X: {vol_7[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 7 en y: {vol_7[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en X: {vol_7[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 7 en y: {vol_7[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 14')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en X: {vol_14[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 14 en y: {vol_14[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en X: {vol_14[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 14 en y: {vol_14[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en X: {vol_14[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 14 en y: {vol_14[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 21')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en X: {vol_21[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 21 en y: {vol_21[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en X: {vol_21[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 21 en y: {vol_21[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en X: {vol_21[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 21 en y: {vol_21[5].shape}')\n",
+        "\n",
+        "print('\\nτ = 28')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en X: {vol_28[0].shape}')\n",
+        "print(f'Tamaño del conjunto de entrenamiento τ = 28 en y: {vol_28[1].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en X: {vol_28[2].shape}')\n",
+        "print(f'Tamaño del conjunto de validación τ = 28 en y: {vol_28[3].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en X: {vol_28[4].shape}')\n",
+        "print(f'Tamaño del conjunto de prueba τ = 28 en y: {vol_28[5].shape}')"
+      ],
+      "id": "9ed79e70",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "# Visualización de los pliegues extraídos\n"
+      ],
+      "id": "906711f5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def plot_folds(data: np.array, tau_v: list, name: str):\n",
+        "    fig = go.Figure()\n",
+        "\n",
+        "    colors = {\n",
+        "        'train': '#9B7EBD',\n",
+        "        'validation': '#7AB2D3',\n",
+        "        'test': '#CBD2A4'\n",
+        "    }\n",
+        "\n",
+        "    for i, tau in enumerate(tau_v):\n",
+        "        X_train_s, y_train_s = data[i][0].shape, data[i][1].shape\n",
+        "        X_val_s, y_val_s = data[i][2].shape, data[i][3].shape\n",
+        "        X_test_s, y_test_s = data[i][4].shape, data[i][5].shape\n",
+        "\n",
+        "        fig.add_trace(go.Scatter(\n",
+        "            x=list(range(1, X_train_s[0] + 1)),\n",
+        "            y=[i + 1] * X_train_s[0],\n",
+        "            mode='lines',\n",
+        "            line=dict(color=colors['train'], width=6),\n",
+        "            name='Train' if i == 0 else \"\",\n",
+        "            showlegend=(i == 0)\n",
+        "        ))\n",
+        "\n",
+        "        fig.add_trace(go.Scatter(\n",
+        "            x=list(range(X_train_s[0] + 1, X_train_s[0] + X_val_s[0] + 1)),\n",
+        "            y=[i + 1] * X_val_s[0],\n",
+        "            mode='lines',\n",
+        "            line=dict(color=colors['validation'], width=6),\n",
+        "            name='Validation' if i == 0 else \"\",\n",
+        "            showlegend=(i == 0)\n",
+        "        ))\n",
+        "\n",
+        "        fig.add_trace(go.Scatter(\n",
+        "            x=list(range(X_train_s[0] + X_val_s[0] + 1, X_train_s[0] + X_val_s[0] + X_test_s[0] + 1)),\n",
+        "            y=[i + 1] * X_test_s[0],\n",
+        "            mode='lines',\n",
+        "            line=dict(color=colors['test'], width=6),\n",
+        "            name='Test' if i == 0 else \"\",\n",
+        "            showlegend=(i == 0)\n",
+        "        ))\n",
+        "\n",
+        "    fig.update_layout(\n",
+        "        title=f\"Visualización de pliegues para {name}\",\n",
+        "        xaxis_title=\"Índice de tiempo\",\n",
+        "        yaxis_title=\"Número de pliegue\",\n",
+        "        legend=dict(orientation=\"h\", yanchor=\"bottom\", y=1.02, xanchor=\"right\", x=1),\n",
+        "        margin={'b': 0, 'r': 30, 'l': 30, 't': 80},\n",
+        "        plot_bgcolor='rgba(0, 0, 0, 0.0)',\n",
+        "        paper_bgcolor='rgba(0, 0, 0, 0.0)',\n",
+        "        font_color=\"white\",\n",
+        "        hoverlabel=dict(\n",
+        "            bgcolor=\"#222\"\n",
+        "        ),\n",
+        "        xaxis=dict(gridcolor='#222', tickfont=dict(color='white'), range = [4800, 5000]),\n",
+        "        yaxis=dict(gridcolor='#222', tickfont=dict(color='white'), tickvals=[1, 2, 3, 4])\n",
+        "    )\n",
+        "\n",
+        "    return fig"
+      ],
+      "id": "48a11bca",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Pliegues del precio\n"
+      ],
+      "id": "e35efc74"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| output: false\n",
+        "tau_v = [7, 14, 21, 28]\n",
+        "\n",
+        "fig_p = plot_folds(price, tau_v, 'Price')\n",
+        "fig_p.show()"
+      ],
+      "id": "2d4cefc3",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "fig_p.write_html('graphs/price_folds.html')"
+      ],
+      "id": "1b706086",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "``` {=html}\n",
+        "<iframe\n",
+        "    src = 'graphs/price_folds.html'\n",
+        "    width = '730'\n",
+        "    height = '400'\n",
+        "    title = 'Visualización de los folds para la variable del precio'\n",
+        ">\n",
+        "</iframe>\n",
+        "```\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "## Pliegues del retorno acumulado\n"
+      ],
+      "id": "0815329c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| output: false\n",
+        "fig_p = plot_folds(price, tau_v, 'A_j')\n",
+        "fig_p.show()"
+      ],
+      "id": "10da240a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| echo: false\n",
+        "fig_p.write_html('graphs/returncumsum_folds.html')"
+      ],
+      "id": "5aa2eb1a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "``` {=html}\n",
+        "<iframe\n",
+        "    src = 'graphs/returncumsum_folds.html'\n",
+        "    width = '730'\n",
+        "    height = '400'\n",
+        "    title = 'Visualización de los folds para la variable del retorno acumulado'\n",
+        ">\n",
+        "</iframe>\n",
+        "```\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "# Modelos de Deep Learning\n",
+        "\n",
+        "## Multilayer Perceptron Models (MLP)\n"
+      ],
+      "id": "82babd67"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def build_mlp(learning_rate=0.001, activation='relu'):\n",
+        "    model = Sequential()\n",
+        "    model.add(Dense(64, input_dim=X_train.shape[1], activation=activation))\n",
+        "    model.add(Dense(32, activation=activation))\n",
+        "    model.add(Dense(1, activation='linear'))\n",
+        "    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mse')\n",
+        "    return model"
+      ],
+      "id": "37526de5",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "model = KerasRegressor(build_fn = build_mlp, verbose=0)\n",
+        "\n",
+        "param = {\n",
+        "    'build_fn__learning_rate': [0.001, 0.01, 0.1, 0.2],\n",
+        "    'build_fn__activation': ['relu', 'tanh', 'sigmoid'],\n",
+        "    'epochs': [50, 100, 150]\n",
+        "}\n",
+        "\n",
+        "grid = GridSearchCV(\n",
+        "    estimator = model,\n",
+        "    param_grid =param,\n",
+        "    cv = 3,\n",
+        "    verbose = 1\n",
+        ")\n",
+        "\n",
+        "grid.fit(price[0], price[1], validation_data = (price[2], price[3]))"
+      ],
+      "id": "8c8d4cbb",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "best_params = grid.best_params_\n",
+        "print(f'Mejor hiperparámetros: {best_params}')\n",
+        "\n",
+        "best_model = grid.best_estimator_\n",
+        "test_loss, test_mae = best_model.model.evaluate(price[4], price[5])\n",
+        "print(f'Loss en el conjunto de prueba: {test_loss}, MAE en el conjunto de prueba: {test_mae}')"
+      ],
+      "id": "4ab88638",
+      "execution_count": null,
+      "outputs": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "pt_ts",
+      "language": "python",
+      "display_name": "pt_ts",
+      "path": "/Users/unfresh25/Library/Jupyter/kernels/pt_ts"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
