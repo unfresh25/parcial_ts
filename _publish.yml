@@ -1,0 +1,4 @@
+- source: project
+  quarto-pub:
+    - id: 058cf9ce-f8a0-45be-87fa-cc65534247e3
+      url: 'https://unfresh25.quarto.pub/parcial-practico-timeseries'

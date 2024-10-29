@@ -268,7 +268,7 @@ require(['plotly'], function(Plotly) {
 
 <section id="importar-librerías" class="level1">
 <h1>Importar librerías</h1>
-<div id="dfb4fde4" class="cell" data-execution_count="1">
+<div id="ac8a6564" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -289,7 +289,7 @@ require(['plotly'], function(Plotly) {
 </section>
 <section id="importar-datos" class="level1">
 <h1>Importar datos</h1>
-<div id="53854406" class="cell" data-execution_count="2">
+<div id="977d69f1" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>btc <span class="op">=</span> pd.read_csv(<span class="st">'https://raw.githubusercontent.com/lihkir/Data/refs/heads/main/Bitcoin%20Historical%20Data.csv'</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -367,13 +367,13 @@ require(['plotly'], function(Plotly) {
 </div>
 </div>
 </div>
-<div id="4ba87707" class="cell" data-execution_count="3">
+<div id="57f69be9" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>btc.shape</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="3">
 <pre><code>(4999, 7)</code></pre>
 </div>
 </div>
-<div id="2e71352c" class="cell" data-execution_count="4">
+<div id="7cafbc65" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
@@ -392,7 +392,7 @@ dtypes: object(7)
 memory usage: 273.5+ KB</code></pre>
 </div>
 </div>
-<div id="633deddf" class="cell" data-execution_count="5">
+<div id="80d39dd6" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]] <span class="op">=</span> btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]].replace(<span class="st">','</span>, <span class="st">''</span>, regex<span class="op">=</span><span class="va">True</span>).astype(<span class="bu">float</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Change %'</span>] <span class="op">=</span> btc[<span class="st">'Change %'</span>].<span class="bu">str</span>.replace(<span class="st">'%'</span>, <span class="st">''</span>).astype(<span class="bu">float</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -488,7 +488,7 @@ memory usage: 273.5+ KB</code></pre>
 </div>
 </div>
 </div>
-<div id="c222abcb" class="cell" data-execution_count="6">
+<div id="74380410" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
@@ -507,7 +507,7 @@ dtypes: datetime64[ns](1), float64(6)
 memory usage: 273.5 KB</code></pre>
 </div>
 </div>
-<div id="627ee7f9" class="cell" data-execution_count="7">
+<div id="2c22d578" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>btc.describe()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="7">
 <div>
@@ -616,7 +616,7 @@ memory usage: 273.5 KB</code></pre>
 </section>
 <section id="datos-faltantes" class="level1">
 <h1>Datos faltantes</h1>
-<div id="c8c6e06d" class="cell" data-execution_count="8">
+<div id="5fef9093" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>missing_values <span class="op">=</span> btc.isnull().<span class="bu">sum</span>()</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>missing_percentage <span class="op">=</span> <span class="bu">round</span>((missing_values <span class="op">/</span> <span class="bu">len</span>(btc)) <span class="op">*</span> <span class="dv">100</span>, <span class="dv">4</span>)</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>missing_percentage</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -631,7 +631,7 @@ Change %    0.00
 dtype: float64</code></pre>
 </div>
 </div>
-<div id="fb2e7458" class="cell" data-execution_count="9">
+<div id="3f4c9611" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>imputer <span class="op">=</span> KNNImputer(n_neighbors <span class="op">=</span> <span class="dv">5</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Vol.'</span>]] <span class="op">=</span> imputer.fit_transform(btc[[<span class="st">'Vol.'</span>]])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -639,7 +639,7 @@ dtype: float64</code></pre>
 </section>
 <section id="visualización-de-precio-y-volumen-tradeado" class="level1">
 <h1>Visualización de precio y volumen tradeado</h1>
-<div id="0396748c" class="cell" data-execution_count="10">
+<div id="03e8d6a9" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> [</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        go.Candlestick(</span>
@@ -674,7 +674,7 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/candlestick_price.html" width="730" height="400" title="Candlestick de la serie de tiempo del precio">
 </iframe>
-<div id="3c08f32f" class="cell" data-execution_count="12">
+<div id="ffafcf0e" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
@@ -709,7 +709,7 @@ dtype: float64</code></pre>
 </section>
 <section id="visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" class="level1">
 <h1>Visualización semanal, mensual y anual del precio del bitcoin</h1>
-<div id="f178b458" class="cell" data-execution_count="14">
+<div id="336b85f1" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>btc_c <span class="op">=</span> btc.copy()</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>btc_c.set_index(<span class="st">'Date'</span>, inplace <span class="op">=</span> <span class="va">True</span>)</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -717,7 +717,7 @@ dtype: float64</code></pre>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>monthly_btc <span class="op">=</span> btc_c.resample(<span class="st">'M'</span>).mean()</span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>yearly_btc <span class="op">=</span> btc_c.resample(<span class="st">'Y'</span>).mean()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="4abb7708" class="cell" data-execution_count="15">
+<div id="0e66209b" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fig_ts <span class="op">=</span> make_subplots(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">3</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
@@ -783,12 +783,12 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/ts_variety.html" width="700" height="800" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
 </iframe>
-<div id="60409d07" class="cell" data-execution_count="17">
+<div id="bbdb8388" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Week'</span>] <span class="op">=</span> btc_c.index.to_series().dt.isocalendar().week</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Month'</span>] <span class="op">=</span> btc_c.index.to_series().dt.month</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Year'</span>] <span class="op">=</span> btc_c.index.to_series().dt.year</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="28489702" class="cell" data-execution_count="18">
+<div id="69255b2e" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_box(df: pd.DataFrame, X: <span class="bu">str</span>, Y: <span class="bu">str</span>, TITLE: <span class="bu">str</span>):</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.box(</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        df,</span>
@@ -828,7 +828,7 @@ dtype: float64</code></pre>
 </section>
 <section id="validación-de-estacionariedad-de-la-serie-de-tiempo" class="level1">
 <h1>Validación de estacionariedad de la serie de tiempo</h1>
-<div id="8121b690" class="cell" data-execution_count="20">
+<div id="6bd3ab71" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_c[<span class="st">'Price'</span>], nlags<span class="op">=</span><span class="dv">2000</span>)</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
@@ -860,7 +860,7 @@ dtype: float64</code></pre>
 </iframe>
 <section id="prueba-de-estacionariedad-de-ljung-box" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box">Prueba de estacionariedad de Ljung-Box</h2>
-<div id="75b47563" class="cell" data-execution_count="22">
+<div id="797e009e" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_c[<span class="st">'Price'</span>], lags<span class="op">=</span>[<span class="dv">200</span>, <span class="dv">500</span>, <span class="dv">1000</span>, <span class="dv">2000</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
@@ -914,7 +914,7 @@ dtype: float64</code></pre>
 </section>
 <section id="prueba-de-estacionariedad-de-dickey-fuller" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller">Prueba de estacionariedad de Dickey Fuller</h2>
-<div id="93b8bed8" class="cell" data-execution_count="23">
+<div id="b9241e1f" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_c[<span class="st">'Price'</span>])</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
@@ -925,8 +925,8 @@ dtype: float64</code></pre>
 <span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -2.685797950257258
-Valor p: 0.07652825121387279
+<pre><code>Estadístico de prueba: -2.685797950257253
+Valor p: 0.07652825121387376
 
 La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </div>
@@ -934,7 +934,7 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </section>
 <section id="transformaciones-para-obtener-una-serie-estacionaria" class="level2">
 <h2 class="anchored" data-anchor-id="transformaciones-para-obtener-una-serie-estacionaria">Transformaciones para obtener una serie estacionaria</h2>
-<div id="a5b642a1" class="cell" data-execution_count="24">
+<div id="9c6de7f8" class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_c.copy()</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'Price'</span>] <span class="op">=</span> btc_c[<span class="st">'Price'</span>].diff()</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1110,7 +1110,7 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </div>
 </div>
 </div>
-<div id="3d52e19e" class="cell" data-execution_count="25">
+<div id="90170457" class="cell" data-execution_count="25">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>result_diff <span class="op">=</span> adfuller(btc_d[<span class="st">'Price'</span>].dropna())</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result_diff[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Valor p: </span><span class="sc">{</span>result_diff[<span class="dv">1</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">'</span>)</span>
@@ -1120,8 +1120,8 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 <span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie diferenciada no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -10.472194066907878
-Valor p: 1.2757808100481514e-18
+<pre><code>Estadístico de prueba: -10.472194066908118
+Valor p: 1.2757808100464155e-18
 
 La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
@@ -1130,12 +1130,12 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </section>
 <section id="comportamiento-por-agrupaciones-de-la-serie-de-tiempo" class="level1">
 <h1>Comportamiento por agrupaciones de la serie de tiempo</h1>
-<div id="d8d83bf5" class="cell" data-execution_count="26">
+<div id="5962b68b" class="cell" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>weekly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'W'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>daily <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'D'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>monthly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'M'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="5083a541" class="cell" data-execution_count="27">
+<div id="d4dc727a" class="cell" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'mu_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).mean()</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).std()</span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1395,7 +1395,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 </div>
 </div>
-<div id="1b5322dd" class="cell" data-execution_count="28">
+<div id="5d693aaf" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_hist(df: pd.DataFrame, diff_: <span class="bu">int</span>, title: <span class="bu">str</span>):</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.histogram(</span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        df[<span class="st">'Price'</span>].diff(diff_).dropna(),</span>
@@ -1435,7 +1435,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </section>
 <section id="medias-móviles-y-tendencia" class="level1">
 <h1>Medias móviles y tendencia</h1>
-<div id="c8b2e5ab" class="cell" data-execution_count="30">
+<div id="1766e19d" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_d.fillna(<span class="dv">0</span>)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>MA2 <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">2</span>).mean()</span>
@@ -1589,7 +1589,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 <iframe src="graphs/media_movil.html" width="730" height="800" title="Distribución con lag = 7">
 </iframe>
-<div id="92d0b39d" class="cell" data-execution_count="32">
+<div id="4de50c4e" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    btc_d[<span class="st">'Price'</span>], </span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
@@ -1671,13 +1671,13 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 <iframe src="graphs/descomposition.html" width="730" height="800" title="Distribución con lag = 7">
 </iframe>
-<div id="2206cb97" class="cell" data-execution_count="34">
+<div id="0fd3161d" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_d.copy()</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>btc_ma[<span class="st">'Price_adj'</span>] <span class="op">=</span> btc_ma[<span class="st">'Price'</span>] <span class="op">-</span> TwoXMA4</span>
 <span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_ma.fillna(<span class="dv">0</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="80deac2e" class="cell" data-execution_count="35">
+<div id="9acfab8d" class="cell" data-execution_count="35">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    btc_ma[<span class="st">'Price_adj'</span>], </span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
@@ -1761,7 +1761,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </iframe>
 <section id="prueba-de-estacionariedad-de-ljung-box-1" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box-1">Prueba de estacionariedad de Ljung-Box</h2>
-<div id="c1b69a16" class="cell" data-execution_count="37">
+<div id="214ed52c" class="cell" data-execution_count="37">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_ma[<span class="st">'Price_adj'</span>], lags<span class="op">=</span>[<span class="dv">24</span>, <span class="dv">100</span>, <span class="dv">200</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
@@ -1810,7 +1810,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </section>
 <section id="prueba-de-estacionariedad-de-dickey-fuller-1" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller-1">Prueba de estacionariedad de Dickey Fuller</h2>
-<div id="3697e9da" class="cell" data-execution_count="38">
+<div id="d91b6783" class="cell" data-execution_count="38">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_ma[<span class="st">'Price_adj'</span>])</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
@@ -1821,13 +1821,13 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -21.518148825437752
+<pre><code>Estadístico de prueba: -21.518148825437567
 Valor p: 0.0
 
 La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
 </div>
-<div id="d0f3c0eb" class="cell" data-execution_count="39">
+<div id="faba8007" class="cell" data-execution_count="39">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_ma[<span class="st">'Price_adj'</span>], nlags<span class="op">=</span><span class="dv">100</span>)</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
@@ -1861,7 +1861,7 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </section>
 <section id="retorno-acumulado-diario-y-volatilidad" class="level1">
 <h1>Retorno acumulado diario y volatilidad</h1>
-<div id="716ee0e3" class="cell" data-execution_count="41">
+<div id="f15cbd41" class="cell" data-execution_count="41">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'R_j'</span>] <span class="op">=</span> btc[<span class="st">'Price'</span>].pct_change()</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'A_t'</span>] <span class="op">=</span> btc[<span class="st">'R_j'</span>].cumsum()</span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -2080,7 +2080,7 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
 </div>
 </div>
-<div id="f6b296af" class="cell" data-execution_count="42">
+<div id="7a10f45c" class="cell" data-execution_count="42">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>btc.to_csv(<span class="st">'data/btc_models.csv'</span>, index <span class="op">=</span> <span class="va">False</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
@@ -2180,7 +2180,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
     var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
     var mailtoRegex = new RegExp(/^mailto:/);
-      var filterRegex = new RegExp('/' + window.location.host + '/');
+      var filterRegex = new RegExp("https:\/\/unfresh25\.quarto\.pub\/parcial-practico-timeseries");
     var isInternal = (href) => {
         return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
     }

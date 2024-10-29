@@ -2,6 +2,12 @@
 title: "Parcial Práctico de Series de Tiempo"
 ---
 
-This is a Quarto website.
+# Introducción
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+En este parcial práctico se aborda el análisis de series de tiempo utilizando datos relacionados con las acciones del Bitcoin. El objetivo principal es aplicar diversos enfoques de modelado, tanto de Deep Learning como estadísticos, para pronosticar y comprender la dinámica de estas series temporales.
+
+# Modelos Implementados
+
+En la parte de Deep Learning, se emplearán redes neuronales recurrentes (RNN), redes neuronales de memoria a largo plazo (LSTM) y perceptrones multicapa (MLP). Por otro lado, en la sección de modelado estadístico, se implementarán modelos de suavización exponencial, Holt-Winters y ARIMA.
+
+Además, se realizará un análisis exploratorio de los datos (EDA) para identificar patrones, tendencias y comportamientos relevantes en las acciones de Bitcoin, proporcionando una base sólida para la posterior implementación de los modelos.

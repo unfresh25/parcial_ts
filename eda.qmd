@@ -4,6 +4,8 @@ title: "Análisis exploratorio de los datos"
 
 # Importar librerías
 
+En esta sección, se importan las librerías necesarias para el análisis exploratorio de los datos de las acciones de Bitcoin. Se utilizarán herramientas como Pandas y Numpy para el manejo de los datos, Plotly para la visualización, y algunos módulos de statsmodels para el análisis de series de tiempo y pruebas estadísticas.
+
 ```{python}
 import pandas as pd
 import numpy as np
@@ -25,19 +27,29 @@ warnings.filterwarnings("ignore")
 
 # Importar datos
 
+A continuación, se realiza la importación de los datos históricos de Bitcoin desde una fuente externa. Estos datos contienen información relevante sobre las acciones, que se utilizará en el análisis para identificar tendencias, patrones y comportamiento de la serie temporal.
+
 ``` {python}
 btc = pd.read_csv('https://raw.githubusercontent.com/lihkir/Data/refs/heads/main/Bitcoin%20Historical%20Data.csv')
 
 btc.head()
 ```
 
+# Exploración de los datos
+
+En esta sección, se observa la forma general del DataFrame para conocer el número de registros y columnas.
+
 ``` {python}
 btc.shape
 ```
 
+Descripción inicial del DataFrame, mostrando las columnas, tipos de datos y valores nulos presentes:
+
 ``` {python}
 btc.info()
 ```
+
+Para realizar el análisis, es necesario convertir las columnas numéricas de tipo string a float y la columna Date a un formato de fecha. A continuación, se aplica la conversión de datos y se ajusta el formato de los volúmenes.
 
 ``` {python}
 btc[['Price', 'Open', 'High', 'Low']] = btc[['Price', 'Open', 'High', 'Low']].replace(',', '', regex=True).astype(float)
@@ -63,6 +75,8 @@ btc['Vol.'] = btc['Vol.'].apply(convert_volume)
 btc.head()
 ```
 
+Luego de las conversiones, se revisa la estructura actual del DataFrame para confirmar que los tipos de datos sean correctos y que se hayan eliminado los símbolos y comas.
+
 ``` {python}
 btc.info()
 ```
@@ -71,7 +85,11 @@ btc.info()
 btc.describe()
 ```
 
+El resumen estadístico revela que el precio promedio de Bitcoin ha sido de aproximadamente 10,812.28 dólares, con un precio de apertura promedio cercano de 10,798.90 dólares. A lo largo del tiempo, los precios diarios más altos han promediado 11,067.45 dólares, mientras que los precios más bajos se han situado en 10,511.89 dólares, indicando una volatilidad diaria moderada. El volumen promedio de transacciones ha sido de 12.38 millones, mostrando un mercado activo, aunque con periodos de bajo volumen mínimo de 80 unidades. El cambio porcentual promedio ha sido positivo, de 0.42% por día, pero con episodios de alta volatilidad que incluyen caídas de hasta -57.21%. Además, los precios han sido significativamente bajos en el primer cuartil, con un valor de 226.70 dólares, lo que indica que durante un cuarto del tiempo analizado, el precio de Bitcoin se mantuvo muy por debajo de los niveles actuales.
+
 # Datos faltantes
+
+El análisis de los datos faltantes en el conjunto de datos de Bitcoin muestra que la columna Volumen presenta valores nulos, que representan un pequeño porcentaje del total de registros. Para manejar estos datos faltantes, se ha implementado una imputación utilizando el algoritmo KNNImputer con 5 vecinos. Este enfoque permite estimar los valores faltantes en función de los patrones observados en los datos circundantes, lo cual es efectivo para mantener la coherencia y calidad de la información antes de proceder con el análisis de series de tiempo.
 
 ``` {python}
 missing_values = btc.isnull().sum()
@@ -79,10 +97,16 @@ missing_percentage = round((missing_values / len(btc)) * 100, 4)
 missing_percentage
 ```
 
+La columna `Vol.` presenta un 0.12% de datos faltantes, lo cual es un porcentaje bajo pero significativo para los análisis.
+
+Para completar los valores faltantes en la columna de Volumen, se emplea el algoritmo de imputación KNNImputer, que utiliza la información de los vecinos más cercanos para predecir los valores faltantes.
+
 ``` {python}
 imputer = KNNImputer(n_neighbors = 5)
 
 btc[['Vol.']] = imputer.fit_transform(btc[['Vol.']])
+
+btc.head()
 ```
 
 # Visualización de precio y volumen tradeado
@@ -137,6 +161,8 @@ fig.write_html('graphs/candlestick_price.html')
 </iframe>
 ```
 
+En el gráfico de velas del Bitcoin se puede observar la evolución del precio de esta criptomoneda a lo largo del tiempo, abarcando desde sus primeros días hasta el año 2024. El gráfico revela períodos de alta volatilidad, con importantes picos en los años 2017-2018 y 2020-2022, en los cuales se registraron máximos históricos seguidos de caídas rápidas. Estos movimientos bruscos sugieren una naturaleza especulativa y altamente volátil en el mercado de Bitcoin. En el periodo más reciente (2023-2024), se evidencia un nuevo máximo cercano a los 70,000 USD, acompañado de correcciones pronunciadas, lo que indica una posible consolidación con fluctuaciones significativas. 
+
 ``` {python}
 #| output: false
 fig = go.Figure()
@@ -183,6 +209,8 @@ fig.write_html('graphs/histogram_vol.html')
 >
 </iframe>
 ```
+
+En el histograma del volumen tradeado diario de Bitcoin se puede observar un patrón particular en la actividad de trading a lo largo del tiempo. La gráfica muestra un aumento abrupto y masivo del volumen tradeado en un periodo específico, alrededor del año 2022. Esto sugiere que durante este período hubo un incremento significativo en la cantidad de Bitcoin intercambiado, superando los 60 mil millones de unidades. Antes de este aumento, el volumen diario se mantuvo relativamente bajo y estable, lo que indica que la mayoría de la actividad de trading se concentró en los años más recientes. Este comportamiento puede estar relacionado con un mayor interés de inversores, la adopción generalizada de Bitcoin o la participación de grandes actores del mercado, provocando así picos de actividad inusuales. La presencia de este único pico elevado en la gráfica sugiere un cambio estructural en el mercado, lo cual es crucial para tener en cuenta en los análisis posteriores y en la modelización de la serie temporal.
 
 # Visualización semanal, mensual y anual del precio del bitcoin
 
@@ -276,6 +304,8 @@ fig_ts.write_html('graphs/ts_variety.html')
 </iframe>
 ```
 
+En las series de tiempo agrupadas por semana, mes y año, se observa la evolución del precio promedio de Bitcoin con diferentes niveles de agregación. El gráfico semanal revela fluctuaciones cortas y alta volatilidad, mientras que el mensual suaviza estos movimientos, destacando picos en 2017-2018 y 2020-2022, reflejando ciclos de auge y caída. Por último, el gráfico anual muestra un crecimiento sostenido desde 2017, con un notable aumento en 2021 y una estabilización posterior hasta un nuevo máximo en 2024. Esta combinación permite analizar tanto la volatilidad a corto plazo como las tendencias a largo plazo.
+
 ``` {python}
 btc_c['Week'] = btc_c.index.to_series().dt.isocalendar().week
 btc_c['Month'] = btc_c.index.to_series().dt.month
@@ -352,6 +382,8 @@ fig_box_y.write_html('graphs/box_variety_y.html')
 </iframe>
 ```
 
+En los gráficos de distribución semanal, mensual y anual del precio de Bitcoin, se observa la variabilidad y dispersión del precio en diferentes escalas de tiempo. En la distribución semanal, los boxplots reflejan una amplia variabilidad, con picos notables en algunas semanas donde el precio superó los 60,000 USD, lo que sugiere fluctuaciones significativas en cortos periodos. En la distribución mensual, los rangos son más amplios, y se observan outliers frecuentes que destacan eventos extremos en cada mes, especialmente en los primeros y últimos meses del año. Por último, la distribución anual muestra una tendencia de expansión del rango de precios a medida que avanza el tiempo, con un crecimiento constante y variabilidad creciente desde 2016, alcanzando picos de precio más elevados en 2021 y 2024.
+
 # Validación de estacionariedad de la serie de tiempo
 
 ``` {python}
@@ -399,6 +431,10 @@ fig.write_html('graphs/acf_1.html')
 </iframe>
 ```
 
+En el gráfico de autocorrelación, se representa la correlación de la serie temporal del precio de Bitcoin consigo misma en diferentes retardos (lags). La autocorrelación inicial es cercana a 1, lo cual indica que los valores consecutivos del precio están altamente correlacionados, es decir, existe una fuerte dependencia entre observaciones adyacentes. A medida que aumenta el número de retardos, la autocorrelación disminuye gradualmente hasta acercarse a cero, lo que sugiere que las observaciones distantes en el tiempo tienen poca o ninguna relación entre sí.
+
+Esta tendencia de decaimiento lento es una señal de que la serie no es estacionaria, ya que la autocorrelación no converge rápidamente hacia cero. La no estacionariedad implica que hay patrones como tendencias o ciclos que persisten en el tiempo, lo cual es importante tener en cuenta para modelar adecuadamente esta serie y elegir métodos de transformación que permitan hacerla estacionaria para aplicar modelos que asumen esta propiedad.
+
 ## Prueba de estacionariedad de Ljung-Box
 
 ``` {python}
@@ -428,6 +464,8 @@ else:
 
 ## Transformaciones para obtener una serie estacionaria
 
+Para obtener una serie estacionaria y facilitar el análisis y modelado de los precios de Bitcoin, se procederá a realizar una transformación basada en la diferenciación. La serie original ha mostrado indicios de no ser estacionaria, con un decaimiento lento en la autocorrelación, lo cual sugiere la presencia de tendencia. Por esta razón, se aplicará la diferenciación, que consiste en restar a cada valor su valor previo, con el objetivo de eliminar tendencias y estabilizar la media de la serie. Posteriormente, se evaluará la estacionariedad de la serie diferenciada mediante la prueba de Dickey-Fuller Aumentada (ADF), observando si el valor p es menor a 0.05, lo que indicaría que la serie ya es estacionaria.
+
 ``` {python}
 btc_d = btc_c.copy()
 btc_d['Price'] = btc_c['Price'].diff()
@@ -447,6 +485,8 @@ else:
 ```
 
 # Comportamiento por agrupaciones de la serie de tiempo
+
+Para explorar más a fondo el comportamiento de la serie diferenciada, se realizará un análisis por períodos, agrupando los datos a nivel diario, semanal y mensual para calcular la media y la desviación estándar de los precios en cada intervalo. Esto permitirá identificar patrones de variabilidad en diferentes escalas temporales. También se calcularán medias y desviaciones estándar móviles para ventanas de 7, 30 y 90 días, lo que ayudará a observar cómo evolucionan el promedio y la dispersión de los precios a lo largo del tiempo.
 
 ``` {python}
 weekly = btc_d['Price'].resample('W').agg(['mean', 'std'])
@@ -536,6 +576,10 @@ fig_90.write_html('graphs/hist_90.html')
 >
 </iframe>
 ```
+
+En los histogramas de las distribuciones con diferentes retardos (lags) de 7, 30 y 90 días, se puede observar la variabilidad de los precios diferenciados del Bitcoin a lo largo del tiempo. En los tres gráficos, se nota una clara concentración de los valores alrededor de cero, indicando que la mayoría de las diferencias en los precios son relativamente pequeñas en cada lag evaluado.
+
+Sin embargo, a medida que aumenta el lag de 7 a 30 y luego a 90 días, se aprecia un aumento gradual en la dispersión de los datos, lo cual se refleja en colas más extendidas en los histogramas. Este comportamiento indica que, conforme se incrementa el período de comparación, las diferencias de precio tienden a ser más amplias, sugiriendo una mayor variabilidad en el largo plazo.
 
 # Medias móviles y tendencia
 
@@ -708,6 +752,10 @@ fig.write_html('graphs/media_movil.html')
 </iframe>
 ```
 
+Los gráficos muestran la evolución de los precios diferenciados de Bitcoin utilizando medias móviles (2, 3 y 4 días) y sus versiones suavizadas (2X y 3X). Las medias móviles siguen de cerca las fluctuaciones a corto plazo, mientras que las medias dobles suavizan las curvas, destacando tendencias más claras y menos influenciadas por variaciones bruscas. Las curvas suavizadas permiten identificar patrones subyacentes y direcciones generales, eliminando parte del ruido presente en los datos diarios. Esto facilita la visualización de la evolución de los precios en diferentes escalas temporales.
+
+La descomposición de la serie de tiempo se realiza para identificar y separar sus componentes clave: tendencia, estacionalidad y residuales, lo que facilita el análisis y el modelado.
+
 ``` {python}
 #| output: false
 decomposition = seasonal_decompose(
@@ -804,6 +852,10 @@ fig.write_html('graphs/descomposition.html')
 >
 </iframe>
 ```
+
+La serie observada muestra una mayor volatilidad en los últimos años. La tendencia revela un comportamiento de largo plazo, destacando caídas y recuperaciones. La estacionalidad presenta patrones cíclicos repetitivos, indicando un componente periódico constante en la serie. Finalmente, los residuales capturan las variaciones no explicadas, mostrando un aumento de la fluctuación aleatoria en el periodo reciente. Esta separación es crucial para comprender mejor la dinámica del precio del Bitcoin.
+
+Ahora, se ajusta el precio diferenciado de Bitcoin restando la media móvil doble de 4 días (TwoXMA4) para eliminar el componente de tendencia y suavizar las fluctuaciones de corto plazo. Este ajuste ayuda a centrarse en los cambios más significativos y reduce la influencia de la variabilidad corta. Al realizar esta transformación, se obtiene una serie que resalta las desviaciones del comportamiento promedio reciente, facilitando la identificación de patrones o anomalías.
 
 ``` {python}
 btc_ma = btc_d.copy()
@@ -908,6 +960,10 @@ fig.write_html('graphs/descomposition_2.html')
 >
 </iframe>
 ```
+
+Se observa que la tendencia se ha aplanado considerablemente, lo que indica que las oscilaciones de corto plazo fueron removidas. La estacionalidad se mantiene, evidenciando ciclos recurrentes y patrones que persisten en la serie. Los residuales ahora capturan mejor las fluctuaciones no explicadas, lo cual puede indicar la presencia de variabilidad no sistemática o ruido en los datos. En conjunto, esta transformación permite aislar los patrones relevantes y eliminar las influencias de corto plazo, proporcionando una base más clara para el análisis de la serie de tiempo.
+
+Ahora, verificaremos si nuestra serie de tiempo se mantiene siendo estacionaria o no.
 
 ## Prueba de estacionariedad de Ljung-Box
 
