@@ -78,6 +78,9 @@ btc.head()
 Luego de las conversiones, se revisa la estructura actual del DataFrame para confirmar que los tipos de datos sean correctos y que se hayan eliminado los símbolos y comas.
 
 ``` {python}
+btc = btc.sort_values(by='Date')
+btc = btc.reset_index(drop = True)
+
 btc.info()
 ```
 
@@ -1040,7 +1043,9 @@ fig.write_html('graphs/acf_2.html')
 # Retorno acumulado diario y volatilidad 
 
 ``` {python}
-btc['R_j'] = btc['Price'].pct_change()
+btc['R_j'] = (btc['Price'] - btc['Price'].shift(1)) / btc['Price'].shift(1)
+btc['R_j'].fillna(0, inplace=True)
+
 btc['A_t'] = btc['R_j'].cumsum()
 
 def calc_volt(btc: pd.DataFrame, window: int):

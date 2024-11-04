@@ -66,7 +66,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./model.html" rel="next">
+<link href="./models.html" rel="next">
 <link href="./index.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -183,7 +183,7 @@ require(['plotly'], function(Plotly) {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./model.html" class="sidebar-item-text sidebar-link">
+  <a href="./models.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Modelos estadísticos</span></a>
   </div>
 </li>
@@ -205,18 +205,19 @@ require(['plotly'], function(Plotly) {
   <ul>
   <li><a href="#importar-librerías" id="toc-importar-librerías" class="nav-link active" data-scroll-target="#importar-librerías">Importar librerías</a></li>
   <li><a href="#importar-datos" id="toc-importar-datos" class="nav-link" data-scroll-target="#importar-datos">Importar datos</a></li>
+  <li><a href="#exploración-de-los-datos" id="toc-exploración-de-los-datos" class="nav-link" data-scroll-target="#exploración-de-los-datos">Exploración de los datos</a></li>
   <li><a href="#datos-faltantes" id="toc-datos-faltantes" class="nav-link" data-scroll-target="#datos-faltantes">Datos faltantes</a></li>
   <li><a href="#visualización-de-precio-y-volumen-tradeado" id="toc-visualización-de-precio-y-volumen-tradeado" class="nav-link" data-scroll-target="#visualización-de-precio-y-volumen-tradeado">Visualización de precio y volumen tradeado</a></li>
   <li><a href="#visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" id="toc-visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" class="nav-link" data-scroll-target="#visualización-semanal-mensual-y-anual-del-precio-del-bitcoin">Visualización semanal, mensual y anual del precio del bitcoin</a></li>
   <li><a href="#validación-de-estacionariedad-de-la-serie-de-tiempo" id="toc-validación-de-estacionariedad-de-la-serie-de-tiempo" class="nav-link" data-scroll-target="#validación-de-estacionariedad-de-la-serie-de-tiempo">Validación de estacionariedad de la serie de tiempo</a>
-  <ul class="collapse">
+  <ul>
   <li><a href="#prueba-de-estacionariedad-de-ljung-box" id="toc-prueba-de-estacionariedad-de-ljung-box" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-ljung-box">Prueba de estacionariedad de Ljung-Box</a></li>
   <li><a href="#prueba-de-estacionariedad-de-dickey-fuller" id="toc-prueba-de-estacionariedad-de-dickey-fuller" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-dickey-fuller">Prueba de estacionariedad de Dickey Fuller</a></li>
   <li><a href="#transformaciones-para-obtener-una-serie-estacionaria" id="toc-transformaciones-para-obtener-una-serie-estacionaria" class="nav-link" data-scroll-target="#transformaciones-para-obtener-una-serie-estacionaria">Transformaciones para obtener una serie estacionaria</a></li>
   </ul></li>
   <li><a href="#comportamiento-por-agrupaciones-de-la-serie-de-tiempo" id="toc-comportamiento-por-agrupaciones-de-la-serie-de-tiempo" class="nav-link" data-scroll-target="#comportamiento-por-agrupaciones-de-la-serie-de-tiempo">Comportamiento por agrupaciones de la serie de tiempo</a></li>
   <li><a href="#medias-móviles-y-tendencia" id="toc-medias-móviles-y-tendencia" class="nav-link" data-scroll-target="#medias-móviles-y-tendencia">Medias móviles y tendencia</a>
-  <ul class="collapse">
+  <ul>
   <li><a href="#prueba-de-estacionariedad-de-ljung-box-1" id="toc-prueba-de-estacionariedad-de-ljung-box-1" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-ljung-box-1">Prueba de estacionariedad de Ljung-Box</a></li>
   <li><a href="#prueba-de-estacionariedad-de-dickey-fuller-1" id="toc-prueba-de-estacionariedad-de-dickey-fuller-1" class="nav-link" data-scroll-target="#prueba-de-estacionariedad-de-dickey-fuller-1">Prueba de estacionariedad de Dickey Fuller</a></li>
   </ul></li>
@@ -268,7 +269,8 @@ require(['plotly'], function(Plotly) {
 
 <section id="importar-librerías" class="level1">
 <h1>Importar librerías</h1>
-<div id="ac8a6564" class="cell" data-execution_count="1">
+<p>En esta sección, se importan las librerías necesarias para el análisis exploratorio de los datos de las acciones de Bitcoin. Se utilizarán herramientas como Pandas y Numpy para el manejo de los datos, Plotly para la visualización, y algunos módulos de statsmodels para el análisis de series de tiempo y pruebas estadísticas.</p>
+<div id="6dcbec20" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -289,11 +291,12 @@ require(['plotly'], function(Plotly) {
 </section>
 <section id="importar-datos" class="level1">
 <h1>Importar datos</h1>
-<div id="977d69f1" class="cell" data-execution_count="2">
+<p>A continuación, se realiza la importación de los datos históricos de Bitcoin desde una fuente externa. Estos datos contienen información relevante sobre las acciones, que se utilizará en el análisis para identificar tendencias, patrones y comportamiento de la serie temporal.</p>
+<div id="4494a68e" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>btc <span class="op">=</span> pd.read_csv(<span class="st">'https://raw.githubusercontent.com/lihkir/Data/refs/heads/main/Bitcoin%20Historical%20Data.csv'</span>)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="2">
+<div class="cell-output cell-output-display" data-execution_count="212">
 <div>
 
 
@@ -367,13 +370,18 @@ require(['plotly'], function(Plotly) {
 </div>
 </div>
 </div>
-<div id="57f69be9" class="cell" data-execution_count="3">
+</section>
+<section id="exploración-de-los-datos" class="level1">
+<h1>Exploración de los datos</h1>
+<p>En esta sección, se observa la forma general del DataFrame para conocer el número de registros y columnas.</p>
+<div id="05bbcc5a" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>btc.shape</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<div class="cell-output cell-output-display" data-execution_count="213">
 <pre><code>(4999, 7)</code></pre>
 </div>
 </div>
-<div id="7cafbc65" class="cell" data-execution_count="4">
+<p>Descripción inicial del DataFrame, mostrando las columnas, tipos de datos y valores nulos presentes:</p>
+<div id="4233abcf" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
@@ -392,7 +400,8 @@ dtypes: object(7)
 memory usage: 273.5+ KB</code></pre>
 </div>
 </div>
-<div id="80d39dd6" class="cell" data-execution_count="5">
+<p>Para realizar el análisis, es necesario convertir las columnas numéricas de tipo string a float y la columna Date a un formato de fecha. A continuación, se aplica la conversión de datos y se ajusta el formato de los volúmenes.</p>
+<div id="f87224c5" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]] <span class="op">=</span> btc[[<span class="st">'Price'</span>, <span class="st">'Open'</span>, <span class="st">'High'</span>, <span class="st">'Low'</span>]].replace(<span class="st">','</span>, <span class="st">''</span>, regex<span class="op">=</span><span class="va">True</span>).astype(<span class="bu">float</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Change %'</span>] <span class="op">=</span> btc[<span class="st">'Change %'</span>].<span class="bu">str</span>.replace(<span class="st">'%'</span>, <span class="st">''</span>).astype(<span class="bu">float</span>)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -414,7 +423,7 @@ memory usage: 273.5+ KB</code></pre>
 <span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'Vol.'</span>] <span class="op">=</span> btc[<span class="st">'Vol.'</span>].<span class="bu">apply</span>(convert_volume)</span>
 <span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="5">
+<div class="cell-output cell-output-display" data-execution_count="215">
 <div>
 
 
@@ -488,8 +497,12 @@ memory usage: 273.5+ KB</code></pre>
 </div>
 </div>
 </div>
-<div id="74380410" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Luego de las conversiones, se revisa la estructura actual del DataFrame para confirmar que los tipos de datos sean correctos y que se hayan eliminado los símbolos y comas.</p>
+<div id="203e1768" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>btc <span class="op">=</span> btc.sort_values(by<span class="op">=</span><span class="st">'Date'</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>btc <span class="op">=</span> btc.reset_index(drop <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>btc.info()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
 RangeIndex: 4999 entries, 0 to 4998
@@ -507,9 +520,9 @@ dtypes: datetime64[ns](1), float64(6)
 memory usage: 273.5 KB</code></pre>
 </div>
 </div>
-<div id="2c22d578" class="cell" data-execution_count="7">
+<div id="3976c819" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>btc.describe()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div class="cell-output cell-output-display" data-execution_count="217">
 <div>
 
 
@@ -613,14 +626,16 @@ memory usage: 273.5 KB</code></pre>
 </div>
 </div>
 </div>
+<p>El resumen estadístico revela que el precio promedio de Bitcoin ha sido de aproximadamente 10,812.28 dólares, con un precio de apertura promedio cercano de 10,798.90 dólares. A lo largo del tiempo, los precios diarios más altos han promediado 11,067.45 dólares, mientras que los precios más bajos se han situado en 10,511.89 dólares, indicando una volatilidad diaria moderada. El volumen promedio de transacciones ha sido de 12.38 millones, mostrando un mercado activo, aunque con periodos de bajo volumen mínimo de 80 unidades. El cambio porcentual promedio ha sido positivo, de 0.42% por día, pero con episodios de alta volatilidad que incluyen caídas de hasta -57.21%. Además, los precios han sido significativamente bajos en el primer cuartil, con un valor de 226.70 dólares, lo que indica que durante un cuarto del tiempo analizado, el precio de Bitcoin se mantuvo muy por debajo de los niveles actuales.</p>
 </section>
 <section id="datos-faltantes" class="level1">
 <h1>Datos faltantes</h1>
-<div id="5fef9093" class="cell" data-execution_count="8">
+<p>El análisis de los datos faltantes en el conjunto de datos de Bitcoin muestra que la columna Volumen presenta valores nulos, que representan un pequeño porcentaje del total de registros. Para manejar estos datos faltantes, se ha implementado una imputación utilizando el algoritmo KNNImputer con 5 vecinos. Este enfoque permite estimar los valores faltantes en función de los patrones observados en los datos circundantes, lo cual es efectivo para mantener la coherencia y calidad de la información antes de proceder con el análisis de series de tiempo.</p>
+<div id="39b606be" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>missing_values <span class="op">=</span> btc.isnull().<span class="bu">sum</span>()</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>missing_percentage <span class="op">=</span> <span class="bu">round</span>((missing_values <span class="op">/</span> <span class="bu">len</span>(btc)) <span class="op">*</span> <span class="dv">100</span>, <span class="dv">4</span>)</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>missing_percentage</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="8">
+<div class="cell-output cell-output-display" data-execution_count="218">
 <pre><code>Date        0.00
 Price       0.00
 Open        0.00
@@ -631,15 +646,92 @@ Change %    0.00
 dtype: float64</code></pre>
 </div>
 </div>
-<div id="3f4c9611" class="cell" data-execution_count="9">
+<p>La columna <code>Vol.</code> presenta un 0.12% de datos faltantes, lo cual es un porcentaje bajo pero significativo para los análisis.</p>
+<p>Para completar los valores faltantes en la columna de Volumen, se emplea el algoritmo de imputación KNNImputer, que utiliza la información de los vecinos más cercanos para predecir los valores faltantes.</p>
+<div id="fd9dcdfa" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>imputer <span class="op">=</span> KNNImputer(n_neighbors <span class="op">=</span> <span class="dv">5</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Vol.'</span>]] <span class="op">=</span> imputer.fit_transform(btc[[<span class="st">'Vol.'</span>]])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>btc[[<span class="st">'Vol.'</span>]] <span class="op">=</span> imputer.fit_transform(btc[[<span class="st">'Vol.'</span>]])</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>btc.head()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="219">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th">Price</th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Vol.</th>
+<th data-quarto-table-cell-role="th">Change %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>2010-07-18</td>
+<td>0.1</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>2010-07-19</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>2010-07-20</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>2010-07-21</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>2010-07-22</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
 </div>
 </section>
 <section id="visualización-de-precio-y-volumen-tradeado" class="level1">
 <h1>Visualización de precio y volumen tradeado</h1>
-<div id="03e8d6a9" class="cell" data-execution_count="10">
+<div id="346f11fa" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure(</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> [</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        go.Candlestick(</span>
@@ -674,7 +766,8 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/candlestick_price.html" width="730" height="400" title="Candlestick de la serie de tiempo del precio">
 </iframe>
-<div id="ffafcf0e" class="cell" data-execution_count="12">
+<p>En el gráfico de velas del Bitcoin se puede observar la evolución del precio de esta criptomoneda a lo largo del tiempo, abarcando desde sus primeros días hasta el año 2024. El gráfico revela períodos de alta volatilidad, con importantes picos en los años 2017-2018 y 2020-2022, en los cuales se registraron máximos históricos seguidos de caídas rápidas. Estos movimientos bruscos sugieren una naturaleza especulativa y altamente volátil en el mercado de Bitcoin. En el periodo más reciente (2023-2024), se evidencia un nuevo máximo cercano a los 70,000 USD, acompañado de correcciones pronunciadas, lo que indica una posible consolidación con fluctuaciones significativas.</p>
+<div id="2adae9a5" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>fig.add_trace(</span>
@@ -706,10 +799,11 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/histogram_vol.html" width="730" height="400" title="Histograma del volumen de tradeado">
 </iframe>
+<p>En el histograma del volumen tradeado diario de Bitcoin se puede observar un patrón particular en la actividad de trading a lo largo del tiempo. La gráfica muestra un aumento abrupto y masivo del volumen tradeado en un periodo específico, alrededor del año 2022. Esto sugiere que durante este período hubo un incremento significativo en la cantidad de Bitcoin intercambiado, superando los 60 mil millones de unidades. Antes de este aumento, el volumen diario se mantuvo relativamente bajo y estable, lo que indica que la mayoría de la actividad de trading se concentró en los años más recientes. Este comportamiento puede estar relacionado con un mayor interés de inversores, la adopción generalizada de Bitcoin o la participación de grandes actores del mercado, provocando así picos de actividad inusuales. La presencia de este único pico elevado en la gráfica sugiere un cambio estructural en el mercado, lo cual es crucial para tener en cuenta en los análisis posteriores y en la modelización de la serie temporal.</p>
 </section>
 <section id="visualización-semanal-mensual-y-anual-del-precio-del-bitcoin" class="level1">
 <h1>Visualización semanal, mensual y anual del precio del bitcoin</h1>
-<div id="336b85f1" class="cell" data-execution_count="14">
+<div id="0e60b756" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>btc_c <span class="op">=</span> btc.copy()</span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>btc_c.set_index(<span class="st">'Date'</span>, inplace <span class="op">=</span> <span class="va">True</span>)</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -717,7 +811,7 @@ dtype: float64</code></pre>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>monthly_btc <span class="op">=</span> btc_c.resample(<span class="st">'M'</span>).mean()</span>
 <span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>yearly_btc <span class="op">=</span> btc_c.resample(<span class="st">'Y'</span>).mean()</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="0e66209b" class="cell" data-execution_count="15">
+<div id="8ff194d1" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>fig_ts <span class="op">=</span> make_subplots(</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    rows<span class="op">=</span><span class="dv">3</span>, cols<span class="op">=</span><span class="dv">1</span>, </span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    shared_xaxes<span class="op">=</span><span class="va">True</span>, </span>
@@ -783,12 +877,13 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/ts_variety.html" width="700" height="800" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
 </iframe>
-<div id="bbdb8388" class="cell" data-execution_count="17">
+<p>En las series de tiempo agrupadas por semana, mes y año, se observa la evolución del precio promedio de Bitcoin con diferentes niveles de agregación. El gráfico semanal revela fluctuaciones cortas y alta volatilidad, mientras que el mensual suaviza estos movimientos, destacando picos en 2017-2018 y 2020-2022, reflejando ciclos de auge y caída. Por último, el gráfico anual muestra un crecimiento sostenido desde 2017, con un notable aumento en 2021 y una estabilización posterior hasta un nuevo máximo en 2024. Esta combinación permite analizar tanto la volatilidad a corto plazo como las tendencias a largo plazo.</p>
+<div id="49d036b5" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Week'</span>] <span class="op">=</span> btc_c.index.to_series().dt.isocalendar().week</span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Month'</span>] <span class="op">=</span> btc_c.index.to_series().dt.month</span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>btc_c[<span class="st">'Year'</span>] <span class="op">=</span> btc_c.index.to_series().dt.year</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="69255b2e" class="cell" data-execution_count="18">
+<div id="fadeebe0" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_box(df: pd.DataFrame, X: <span class="bu">str</span>, Y: <span class="bu">str</span>, TITLE: <span class="bu">str</span>):</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.box(</span>
 <span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        df,</span>
@@ -825,10 +920,11 @@ dtype: float64</code></pre>
 </iframe>
 <iframe src="graphs/box_variety_y.html" width="730" height="400" title="Series de Tiempo Agrupadas (Semana, Mes, Año)">
 </iframe>
+<p>En los gráficos de distribución semanal, mensual y anual del precio de Bitcoin, se observa la variabilidad y dispersión del precio en diferentes escalas de tiempo. En la distribución semanal, los boxplots reflejan una amplia variabilidad, con picos notables en algunas semanas donde el precio superó los 60,000 USD, lo que sugiere fluctuaciones significativas en cortos periodos. En la distribución mensual, los rangos son más amplios, y se observan outliers frecuentes que destacan eventos extremos en cada mes, especialmente en los primeros y últimos meses del año. Por último, la distribución anual muestra una tendencia de expansión del rango de precios a medida que avanza el tiempo, con un crecimiento constante y variabilidad creciente desde 2016, alcanzando picos de precio más elevados en 2021 y 2024.</p>
 </section>
 <section id="validación-de-estacionariedad-de-la-serie-de-tiempo" class="level1">
 <h1>Validación de estacionariedad de la serie de tiempo</h1>
-<div id="6bd3ab71" class="cell" data-execution_count="20">
+<div id="915dd435" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_c[<span class="st">'Price'</span>], nlags<span class="op">=</span><span class="dv">2000</span>)</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
@@ -858,9 +954,11 @@ dtype: float64</code></pre>
 </div>
 <iframe src="graphs/acf_1.html" width="730" height="400" title="ACF de las diferencias estacionales">
 </iframe>
+<p>En el gráfico de autocorrelación, se representa la correlación de la serie temporal del precio de Bitcoin consigo misma en diferentes retardos (lags). La autocorrelación inicial es cercana a 1, lo cual indica que los valores consecutivos del precio están altamente correlacionados, es decir, existe una fuerte dependencia entre observaciones adyacentes. A medida que aumenta el número de retardos, la autocorrelación disminuye gradualmente hasta acercarse a cero, lo que sugiere que las observaciones distantes en el tiempo tienen poca o ninguna relación entre sí.</p>
+<p>Esta tendencia de decaimiento lento es una señal de que la serie no es estacionaria, ya que la autocorrelación no converge rápidamente hacia cero. La no estacionariedad implica que hay patrones como tendencias o ciclos que persisten en el tiempo, lo cual es importante tener en cuenta para modelar adecuadamente esta serie y elegir métodos de transformación que permitan hacerla estacionaria para aplicar modelos que asumen esta propiedad.</p>
 <section id="prueba-de-estacionariedad-de-ljung-box" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box">Prueba de estacionariedad de Ljung-Box</h2>
-<div id="797e009e" class="cell" data-execution_count="22">
+<div id="d101431e" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_c[<span class="st">'Price'</span>], lags<span class="op">=</span>[<span class="dv">200</span>, <span class="dv">500</span>, <span class="dv">1000</span>, <span class="dv">2000</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
@@ -872,7 +970,7 @@ dtype: float64</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags).</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="22">
+<div class="cell-output cell-output-display" data-execution_count="232">
 <div>
 
 
@@ -914,7 +1012,7 @@ dtype: float64</code></pre>
 </section>
 <section id="prueba-de-estacionariedad-de-dickey-fuller" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller">Prueba de estacionariedad de Dickey Fuller</h2>
-<div id="b9241e1f" class="cell" data-execution_count="23">
+<div id="55da3ba5" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_c[<span class="st">'Price'</span>])</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
@@ -925,8 +1023,8 @@ dtype: float64</code></pre>
 <span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -2.685797950257253
-Valor p: 0.07652825121387376
+<pre><code>Estadístico de prueba: -0.1643724104901296
+Valor p: 0.9426372256091573
 
 La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </div>
@@ -934,12 +1032,13 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </section>
 <section id="transformaciones-para-obtener-una-serie-estacionaria" class="level2">
 <h2 class="anchored" data-anchor-id="transformaciones-para-obtener-una-serie-estacionaria">Transformaciones para obtener una serie estacionaria</h2>
-<div id="9c6de7f8" class="cell" data-execution_count="24">
+<p>Para obtener una serie estacionaria y facilitar el análisis y modelado de los precios de Bitcoin, se procederá a realizar una transformación basada en la diferenciación. La serie original ha mostrado indicios de no ser estacionaria, con un decaimiento lento en la autocorrelación, lo cual sugiere la presencia de tendencia. Por esta razón, se aplicará la diferenciación, que consiste en restar a cada valor su valor previo, con el objetivo de eliminar tendencias y estabilizar la media de la serie. Posteriormente, se evaluará la estacionariedad de la serie diferenciada mediante la prueba de Dickey-Fuller Aumentada (ADF), observando si el valor p es menor a 0.05, lo que indicaría que la serie ya es estacionaria.</p>
+<div id="63a77f5f" class="cell" data-execution_count="24">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_c.copy()</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'Price'</span>] <span class="op">=</span> btc_c[<span class="st">'Price'</span>].diff()</span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>btc_d</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="24">
+<div class="cell-output cell-output-display" data-execution_count="234">
 <div>
 
 
@@ -972,96 +1071,24 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td data-quarto-table-cell-role="th">2010-07-18</td>
 <td>NaN</td>
-<td>64036.5</td>
-<td>67587.8</td>
-<td>63812.9</td>
-<td>65590.0</td>
-<td>4.96</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">2024-03-23</td>
-<td>-3174.1</td>
-<td>63785.6</td>
-<td>65972.4</td>
-<td>63074.9</td>
-<td>35110.0</td>
-<td>0.40</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-22</td>
-<td>-252.3</td>
-<td>65501.5</td>
-<td>66633.3</td>
-<td>62328.3</td>
-<td>72430.0</td>
-<td>-2.62</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">2024-03-21</td>
-<td>1718.3</td>
-<td>67860.0</td>
-<td>68161.7</td>
-<td>64616.1</td>
-<td>75260.0</td>
-<td>-3.46</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-20</td>
-<td>2350.2</td>
-<td>62046.8</td>
-<td>68029.5</td>
-<td>60850.9</td>
-<td>133530.0</td>
-<td>9.35</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2010-07-22</td>
 <td>0.0</td>
 <td>0.1</td>
 <td>0.1</td>
-<td>0.1</td>
-<td>2160.0</td>
+<td>80.0</td>
 <td>0.00</td>
-<td>29</td>
+<td>28</td>
 <td>7</td>
 <td>2010</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2010-07-21</td>
+<td data-quarto-table-cell-role="th">2010-07-19</td>
 <td>0.0</td>
 <td>0.1</td>
 <td>0.1</td>
 <td>0.1</td>
-<td>580.0</td>
+<td>570.0</td>
 <td>0.00</td>
 <td>29</td>
 <td>7</td>
@@ -1080,28 +1107,100 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 <td>2010</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2010-07-19</td>
+<td data-quarto-table-cell-role="th">2010-07-21</td>
 <td>0.0</td>
 <td>0.1</td>
 <td>0.1</td>
 <td>0.1</td>
-<td>570.0</td>
+<td>580.0</td>
 <td>0.00</td>
 <td>29</td>
 <td>7</td>
 <td>2010</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2010-07-18</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2010-07-22</td>
 <td>0.0</td>
 <td>0.1</td>
 <td>0.1</td>
-<td>80.0</td>
+<td>0.1</td>
+<td>2160.0</td>
 <td>0.00</td>
-<td>28</td>
+<td>29</td>
 <td>7</td>
 <td>2010</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-20</td>
+<td>5804.0</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-21</td>
+<td>-2350.2</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-22</td>
+<td>-1718.3</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2024-03-23</td>
+<td>252.3</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td>3174.1</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
 </tr>
 </tbody>
 </table>
@@ -1110,7 +1209,7 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 </div>
 </div>
 </div>
-<div id="90170457" class="cell" data-execution_count="25">
+<div id="c93477f8" class="cell" data-execution_count="25">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>result_diff <span class="op">=</span> adfuller(btc_d[<span class="st">'Price'</span>].dropna())</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result_diff[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
 <span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Valor p: </span><span class="sc">{</span>result_diff[<span class="dv">1</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">'</span>)</span>
@@ -1120,8 +1219,8 @@ La serie no es estacionaria (no se rechaza la hipótesis nula).</code></pre>
 <span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie diferenciada no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -10.472194066908118
-Valor p: 1.2757808100464155e-18
+<pre><code>Estadístico de prueba: -9.886578088339688
+Valor p: 3.6505273415768985e-17
 
 La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
@@ -1130,12 +1229,13 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </section>
 <section id="comportamiento-por-agrupaciones-de-la-serie-de-tiempo" class="level1">
 <h1>Comportamiento por agrupaciones de la serie de tiempo</h1>
-<div id="5962b68b" class="cell" data-execution_count="26">
+<p>Para explorar más a fondo el comportamiento de la serie diferenciada, se realizará un análisis por períodos, agrupando los datos a nivel diario, semanal y mensual para calcular la media y la desviación estándar de los precios en cada intervalo. Esto permitirá identificar patrones de variabilidad en diferentes escalas temporales. También se calcularán medias y desviaciones estándar móviles para ventanas de 7, 30 y 90 días, lo que ayudará a observar cómo evolucionan el promedio y la dispersión de los precios a lo largo del tiempo.</p>
+<div id="bc37c73e" class="cell" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>weekly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'W'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>daily <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'D'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>monthly <span class="op">=</span> btc_d[<span class="st">'Price'</span>].resample(<span class="st">'M'</span>).agg([<span class="st">'mean'</span>, <span class="st">'std'</span>])</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="d4dc727a" class="cell" data-execution_count="27">
+<div id="78a93d87" class="cell" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'mu_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).mean()</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_7'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">7</span>).std()</span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1146,7 +1246,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>btc_d[<span class="st">'std_90'</span>] <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">90</span>).std()</span>
 <span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>btc_d</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="27">
+<div class="cell-output cell-output-display" data-execution_count="237">
 <div>
 
 
@@ -1191,52 +1291,16 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </thead>
 <tbody>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td data-quarto-table-cell-role="th">2010-07-18</td>
 <td>NaN</td>
-<td>64036.5</td>
-<td>67587.8</td>
-<td>63812.9</td>
-<td>65590.0</td>
-<td>4.96</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-</tr>
-<tr class="even">
-<td data-quarto-table-cell-role="th">2024-03-23</td>
-<td>-3174.1</td>
-<td>63785.6</td>
-<td>65972.4</td>
-<td>63074.9</td>
-<td>35110.0</td>
-<td>0.40</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-<td>NaN</td>
-</tr>
-<tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-22</td>
-<td>-252.3</td>
-<td>65501.5</td>
-<td>66633.3</td>
-<td>62328.3</td>
-<td>72430.0</td>
-<td>-2.62</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.00</td>
+<td>28</td>
+<td>7</td>
+<td>2010</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1245,16 +1309,16 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <td>NaN</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2024-03-21</td>
-<td>1718.3</td>
-<td>67860.0</td>
-<td>68161.7</td>
-<td>64616.1</td>
-<td>75260.0</td>
-<td>-3.46</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
+<td data-quarto-table-cell-role="th">2010-07-19</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1263,16 +1327,52 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <td>NaN</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2024-03-20</td>
-<td>2350.2</td>
-<td>62046.8</td>
-<td>68029.5</td>
-<td>60850.9</td>
-<td>133530.0</td>
-<td>9.35</td>
-<td>12</td>
-<td>3</td>
-<td>2024</td>
+<td data-quarto-table-cell-role="th">2010-07-20</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2010-07-21</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2010-07-22</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.00</td>
+<td>29</td>
+<td>7</td>
+<td>2010</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1299,94 +1399,94 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <td>...</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2010-07-22</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>2160.0</td>
-<td>0.00</td>
-<td>29</td>
-<td>7</td>
-<td>2010</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2024-03-20</td>
+<td>5804.0</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>-744.614286</td>
+<td>3966.176398</td>
+<td>535.680000</td>
+<td>2669.869083</td>
+<td>266.534444</td>
+<td>1758.714697</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2010-07-21</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>580.0</td>
-<td>0.00</td>
-<td>29</td>
-<td>7</td>
-<td>2010</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2024-03-21</td>
+<td>-2350.2</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>-840.528571</td>
+<td>4000.502822</td>
+<td>441.343333</td>
+<td>2721.409602</td>
+<td>239.276667</td>
+<td>1780.157719</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2010-07-20</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>260.0</td>
-<td>0.00</td>
-<td>29</td>
-<td>7</td>
-<td>2010</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2024-03-22</td>
+<td>-1718.3</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>-811.171429</td>
+<td>3991.973401</td>
+<td>397.576667</td>
+<td>2745.942619</td>
+<td>223.056667</td>
+<td>1791.359476</td>
 </tr>
 <tr class="even">
-<td data-quarto-table-cell-role="th">2010-07-19</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>570.0</td>
-<td>0.00</td>
-<td>29</td>
-<td>7</td>
-<td>2010</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2024-03-23</td>
+<td>252.3</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>-182.342857</td>
+<td>3715.590263</td>
+<td>423.913333</td>
+<td>2740.445423</td>
+<td>233.958889</td>
+<td>1788.484253</td>
 </tr>
 <tr class="odd">
-<td data-quarto-table-cell-role="th">2010-07-18</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>80.0</td>
-<td>0.00</td>
-<td>28</td>
-<td>7</td>
-<td>2010</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td data-quarto-table-cell-role="th">2024-03-24</td>
+<td>3174.1</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>12</td>
+<td>3</td>
+<td>2024</td>
+<td>-168.471429</td>
+<td>3729.939944</td>
+<td>549.046667</td>
+<td>2778.472213</td>
+<td>262.593333</td>
+<td>1814.798699</td>
 </tr>
 </tbody>
 </table>
@@ -1395,7 +1495,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 </div>
 </div>
-<div id="5d693aaf" class="cell" data-execution_count="28">
+<div id="f7828b86" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_hist(df: pd.DataFrame, diff_: <span class="bu">int</span>, title: <span class="bu">str</span>):</span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    fig <span class="op">=</span> px.histogram(</span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        df[<span class="st">'Price'</span>].diff(diff_).dropna(),</span>
@@ -1432,10 +1532,12 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </iframe>
 <iframe src="graphs/hist_90.html" width="730" height="400" title="Distribución con lag = 90">
 </iframe>
+<p>En los histogramas de las distribuciones con diferentes retardos (lags) de 7, 30 y 90 días, se puede observar la variabilidad de los precios diferenciados del Bitcoin a lo largo del tiempo. En los tres gráficos, se nota una clara concentración de los valores alrededor de cero, indicando que la mayoría de las diferencias en los precios son relativamente pequeñas en cada lag evaluado.</p>
+<p>Sin embargo, a medida que aumenta el lag de 7 a 30 y luego a 90 días, se aprecia un aumento gradual en la dispersión de los datos, lo cual se refleja en colas más extendidas en los histogramas. Este comportamiento indica que, conforme se incrementa el período de comparación, las diferencias de precio tienden a ser más amplias, sugiriendo una mayor variabilidad en el largo plazo.</p>
 </section>
 <section id="medias-móviles-y-tendencia" class="level1">
 <h1>Medias móviles y tendencia</h1>
-<div id="1766e19d" class="cell" data-execution_count="30">
+<div id="3234cb66" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>btc_d <span class="op">=</span> btc_d.fillna(<span class="dv">0</span>)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>MA2 <span class="op">=</span> btc_d[<span class="st">'Price'</span>].rolling(window <span class="op">=</span> <span class="dv">2</span>).mean()</span>
@@ -1589,7 +1691,9 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 <iframe src="graphs/media_movil.html" width="730" height="800" title="Distribución con lag = 7">
 </iframe>
-<div id="4de50c4e" class="cell" data-execution_count="32">
+<p>Los gráficos muestran la evolución de los precios diferenciados de Bitcoin utilizando medias móviles (2, 3 y 4 días) y sus versiones suavizadas (2X y 3X). Las medias móviles siguen de cerca las fluctuaciones a corto plazo, mientras que las medias dobles suavizan las curvas, destacando tendencias más claras y menos influenciadas por variaciones bruscas. Las curvas suavizadas permiten identificar patrones subyacentes y direcciones generales, eliminando parte del ruido presente en los datos diarios. Esto facilita la visualización de la evolución de los precios en diferentes escalas temporales.</p>
+<p>La descomposición de la serie de tiempo se realiza para identificar y separar sus componentes clave: tendencia, estacionalidad y residuales, lo que facilita el análisis y el modelado.</p>
+<div id="3b1eb941" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
 <span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    btc_d[<span class="st">'Price'</span>], </span>
 <span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
@@ -1671,13 +1775,15 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 <iframe src="graphs/descomposition.html" width="730" height="800" title="Distribución con lag = 7">
 </iframe>
-<div id="0fd3161d" class="cell" data-execution_count="34">
+<p>La serie observada muestra una mayor volatilidad en los últimos años. La tendencia revela un comportamiento de largo plazo, destacando caídas y recuperaciones. La estacionalidad presenta patrones cíclicos repetitivos, indicando un componente periódico constante en la serie. Finalmente, los residuales capturan las variaciones no explicadas, mostrando un aumento de la fluctuación aleatoria en el periodo reciente. Esta separación es crucial para comprender mejor la dinámica del precio del Bitcoin.</p>
+<p>Ahora, se ajusta el precio diferenciado de Bitcoin restando la media móvil doble de 4 días (TwoXMA4) para eliminar el componente de tendencia y suavizar las fluctuaciones de corto plazo. Este ajuste ayuda a centrarse en los cambios más significativos y reduce la influencia de la variabilidad corta. Al realizar esta transformación, se obtiene una serie que resalta las desviaciones del comportamiento promedio reciente, facilitando la identificación de patrones o anomalías.</p>
+<div id="bcf8711b" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_d.copy()</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>btc_ma[<span class="st">'Price_adj'</span>] <span class="op">=</span> btc_ma[<span class="st">'Price'</span>] <span class="op">-</span> TwoXMA4</span>
 <span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>btc_ma <span class="op">=</span> btc_ma.fillna(<span class="dv">0</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="9acfab8d" class="cell" data-execution_count="35">
+<div id="094d2751" class="cell" data-execution_count="35">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>decomposition <span class="op">=</span> seasonal_decompose(</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    btc_ma[<span class="st">'Price_adj'</span>], </span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">'additive'</span>, </span>
@@ -1759,9 +1865,11 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </div>
 <iframe src="graphs/descomposition_2.html" width="730" height="800" title="Distribución con lag = 7">
 </iframe>
+<p>Se observa que la tendencia se ha aplanado considerablemente, lo que indica que las oscilaciones de corto plazo fueron removidas. La estacionalidad se mantiene, evidenciando ciclos recurrentes y patrones que persisten en la serie. Los residuales ahora capturan mejor las fluctuaciones no explicadas, lo cual puede indicar la presencia de variabilidad no sistemática o ruido en los datos. En conjunto, esta transformación permite aislar los patrones relevantes y eliminar las influencias de corto plazo, proporcionando una base más clara para el análisis de la serie de tiempo.</p>
+<p>Ahora, verificaremos si nuestra serie de tiempo se mantiene siendo estacionaria o no.</p>
 <section id="prueba-de-estacionariedad-de-ljung-box-1" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-ljung-box-1">Prueba de estacionariedad de Ljung-Box</h2>
-<div id="214ed52c" class="cell" data-execution_count="37">
+<div id="102f03c5" class="cell" data-execution_count="37">
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> acorr_ljungbox(btc_ma[<span class="st">'Price_adj'</span>], lags<span class="op">=</span>[<span class="dv">24</span>, <span class="dv">100</span>, <span class="dv">200</span>], return_df<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (result[<span class="st">'lb_pvalue'</span>] <span class="op">&lt;</span> <span class="fl">0.05</span>).<span class="bu">any</span>():</span>
@@ -1773,7 +1881,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <div class="cell-output cell-output-stdout">
 <pre><code>La serie no es estacionaria (rechazamos la hipótesis nula para algunos lags).</code></pre>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="37">
+<div class="cell-output cell-output-display" data-execution_count="247">
 <div>
 
 
@@ -1788,18 +1896,18 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">24</td>
-<td>417.732848</td>
-<td>1.703098e-73</td>
+<td>409.071865</td>
+<td>1.028881e-71</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">100</td>
-<td>855.651535</td>
-<td>2.501987e-120</td>
+<td>836.880752</td>
+<td>1.008158e-116</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">200</td>
-<td>1256.319601</td>
-<td>2.027382e-152</td>
+<td>1228.559253</td>
+<td>2.377668e-147</td>
 </tr>
 </tbody>
 </table>
@@ -1810,7 +1918,7 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 </section>
 <section id="prueba-de-estacionariedad-de-dickey-fuller-1" class="level2">
 <h2 class="anchored" data-anchor-id="prueba-de-estacionariedad-de-dickey-fuller-1">Prueba de estacionariedad de Dickey Fuller</h2>
-<div id="d91b6783" class="cell" data-execution_count="38">
+<div id="1115521b" class="cell" data-execution_count="38">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> adfuller(btc_ma[<span class="st">'Price_adj'</span>])</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Estadístico de prueba: </span><span class="sc">{</span>result[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">'</span>)</span>
@@ -1821,13 +1929,13 @@ La serie diferenciada es estacionaria (rechazamos la hipótesis nula).</code></p
 <span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
 <span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"La serie no es estacionaria (no se rechaza la hipótesis nula)."</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Estadístico de prueba: -21.518148825437567
+<pre><code>Estadístico de prueba: -21.156588565371955
 Valor p: 0.0
 
 La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
 </div>
-<div id="faba8007" class="cell" data-execution_count="39">
+<div id="dcddfed1" class="cell" data-execution_count="39">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>lag_acf <span class="op">=</span> acf(btc_ma[<span class="st">'Price_adj'</span>], nlags<span class="op">=</span><span class="dv">100</span>)</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure()</span>
@@ -1861,19 +1969,21 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </section>
 <section id="retorno-acumulado-diario-y-volatilidad" class="level1">
 <h1>Retorno acumulado diario y volatilidad</h1>
-<div id="f15cbd41" class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'R_j'</span>] <span class="op">=</span> btc[<span class="st">'Price'</span>].pct_change()</span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'A_t'</span>] <span class="op">=</span> btc[<span class="st">'R_j'</span>].cumsum()</span>
+<div id="ef98ec60" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'R_j'</span>] <span class="op">=</span> (btc[<span class="st">'Price'</span>] <span class="op">-</span> btc[<span class="st">'Price'</span>].shift(<span class="dv">1</span>)) <span class="op">/</span> btc[<span class="st">'Price'</span>].shift(<span class="dv">1</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'R_j'</span>].fillna(<span class="dv">0</span>, inplace<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_volt(btc: pd.DataFrame, window: <span class="bu">int</span>):</span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> btc[<span class="st">'R_j'</span>].rolling(window <span class="op">=</span> window).std()</span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>ws <span class="op">=</span> [<span class="dv">7</span>, <span class="dv">14</span>, <span class="dv">21</span>, <span class="dv">28</span>]</span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> w <span class="kw">in</span> ws:</span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    btc[<span class="ss">f'σ_</span><span class="sc">{</span>w<span class="sc">}</span><span class="ss">'</span>] <span class="op">=</span> calc_volt(btc, w)</span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>btc</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="41">
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>btc[<span class="st">'A_t'</span>] <span class="op">=</span> btc[<span class="st">'R_j'</span>].cumsum()</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> calc_volt(btc: pd.DataFrame, window: <span class="bu">int</span>):</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> btc[<span class="st">'R_j'</span>].rolling(window <span class="op">=</span> window).std()</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>ws <span class="op">=</span> [<span class="dv">7</span>, <span class="dv">14</span>, <span class="dv">21</span>, <span class="dv">28</span>]</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> w <span class="kw">in</span> ws:</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>    btc[<span class="ss">f'σ_</span><span class="sc">{</span>w<span class="sc">}</span><span class="ss">'</span>] <span class="op">=</span> calc_volt(btc, w)</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>btc</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="251">
 <div>
 
 
@@ -1899,15 +2009,15 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 <tbody>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">0</td>
-<td>2024-03-24</td>
-<td>67211.9</td>
-<td>64036.5</td>
-<td>67587.8</td>
-<td>63812.9</td>
-<td>65590.0</td>
-<td>4.96</td>
-<td>NaN</td>
-<td>NaN</td>
+<td>2010-07-18</td>
+<td>0.1</td>
+<td>0.0</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>80.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>0.000000</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1915,15 +2025,15 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">1</td>
-<td>2024-03-23</td>
-<td>64037.8</td>
-<td>63785.6</td>
-<td>65972.4</td>
-<td>63074.9</td>
-<td>35110.0</td>
-<td>0.40</td>
-<td>-0.047225</td>
-<td>-0.047225</td>
+<td>2010-07-19</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>570.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>0.000000</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1931,15 +2041,15 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
-<td>2024-03-22</td>
-<td>63785.5</td>
-<td>65501.5</td>
-<td>66633.3</td>
-<td>62328.3</td>
-<td>72430.0</td>
-<td>-2.62</td>
-<td>-0.003940</td>
-<td>-0.051165</td>
+<td>2010-07-20</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>260.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>0.000000</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1947,15 +2057,15 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
-<td>2024-03-21</td>
-<td>65503.8</td>
-<td>67860.0</td>
-<td>68161.7</td>
-<td>64616.1</td>
-<td>75260.0</td>
-<td>-3.46</td>
-<td>0.026939</td>
-<td>-0.024226</td>
+<td>2010-07-21</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>580.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>0.000000</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1963,15 +2073,15 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
-<td>2024-03-20</td>
-<td>67854.0</td>
-<td>62046.8</td>
-<td>68029.5</td>
-<td>60850.9</td>
-<td>133530.0</td>
-<td>9.35</td>
-<td>0.035879</td>
-<td>0.011652</td>
+<td>2010-07-22</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>2160.0</td>
+<td>0.00</td>
+<td>0.000000</td>
+<td>0.000000</td>
 <td>NaN</td>
 <td>NaN</td>
 <td>NaN</td>
@@ -1995,83 +2105,83 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4994</td>
-<td>2010-07-22</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>2160.0</td>
-<td>0.00</td>
-<td>0.000000</td>
-<td>-4.322978</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td>2024-03-20</td>
+<td>67854.0</td>
+<td>62046.8</td>
+<td>68029.5</td>
+<td>60850.9</td>
+<td>133530.0</td>
+<td>9.35</td>
+<td>0.093537</td>
+<td>23.719802</td>
+<td>0.060681</td>
+<td>0.044544</td>
+<td>0.044059</td>
+<td>0.043374</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">4995</td>
-<td>2010-07-21</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>580.0</td>
-<td>0.00</td>
-<td>0.000000</td>
-<td>-4.322978</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td>2024-03-21</td>
+<td>65503.8</td>
+<td>67860.0</td>
+<td>68161.7</td>
+<td>64616.1</td>
+<td>75260.0</td>
+<td>-3.46</td>
+<td>-0.034636</td>
+<td>23.685166</td>
+<td>0.061287</td>
+<td>0.045543</td>
+<td>0.044563</td>
+<td>0.044045</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4996</td>
-<td>2010-07-20</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>260.0</td>
-<td>0.00</td>
-<td>0.000000</td>
-<td>-4.322978</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td>2024-03-22</td>
+<td>63785.5</td>
+<td>65501.5</td>
+<td>66633.3</td>
+<td>62328.3</td>
+<td>72430.0</td>
+<td>-2.62</td>
+<td>-0.026232</td>
+<td>23.658934</td>
+<td>0.061256</td>
+<td>0.045630</td>
+<td>0.044883</td>
+<td>0.044397</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">4997</td>
-<td>2010-07-19</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>570.0</td>
-<td>0.00</td>
-<td>0.000000</td>
-<td>-4.322978</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td>2024-03-23</td>
+<td>64037.8</td>
+<td>63785.6</td>
+<td>65972.4</td>
+<td>63074.9</td>
+<td>35110.0</td>
+<td>0.40</td>
+<td>0.003955</td>
+<td>23.662889</td>
+<td>0.057331</td>
+<td>0.045643</td>
+<td>0.044842</td>
+<td>0.044385</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4998</td>
-<td>2010-07-18</td>
-<td>0.1</td>
-<td>0.0</td>
-<td>0.1</td>
-<td>0.1</td>
-<td>80.0</td>
-<td>0.00</td>
-<td>0.000000</td>
-<td>-4.322978</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
-<td>0.0</td>
+<td>2024-03-24</td>
+<td>67211.9</td>
+<td>64036.5</td>
+<td>67587.8</td>
+<td>63812.9</td>
+<td>65590.0</td>
+<td>4.96</td>
+<td>0.049566</td>
+<td>23.712455</td>
+<td>0.057684</td>
+<td>0.047754</td>
+<td>0.045898</td>
+<td>0.045030</td>
 </tr>
 </tbody>
 </table>
@@ -2080,7 +2190,7 @@ La serie es estacionaria (rechazamos la hipótesis nula).</code></pre>
 </div>
 </div>
 </div>
-<div id="7a10f45c" class="cell" data-execution_count="42">
+<div id="5a24dbbc" class="cell" data-execution_count="42">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>btc.to_csv(<span class="st">'data/btc_models.csv'</span>, index <span class="op">=</span> <span class="va">False</span>)</span></code><button title="Copiar al portapapeles" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
@@ -2180,7 +2290,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
     var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
     var mailtoRegex = new RegExp(/^mailto:/);
-      var filterRegex = new RegExp("https:\/\/unfresh25\.quarto\.pub\/parcial-practico-timeseries");
+      var filterRegex = new RegExp('/' + window.location.host + '/');
     var isInternal = (href) => {
         return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
     }
@@ -2515,7 +2625,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./model.html" class="pagination-link" aria-label="Modelos estadísticos">
+      <a href="./models.html" class="pagination-link" aria-label="Modelos estadísticos">
         <span class="nav-page-text">Modelos estadísticos</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>

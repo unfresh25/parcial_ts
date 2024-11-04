@@ -25,7 +25,7 @@ website:
         text: Introducción
       - href: eda.qmd
         text: Análisis exploratorio de datos
-      - href: model.qmd
+      - href: models.qmd
         text: Modelos estadísticos
       - href: deep.qmd
         text: Modelos de deep learning
@@ -38,7 +38,7 @@ format:
   html:
     theme: cyborg
     toc: true
-    toc-depth: 3
+    toc-depth: 5
     css: styles.css
     smooth-scroll: true
     lang: es

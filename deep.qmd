@@ -2,7 +2,11 @@
 title: "Modelos de deep learning"
 ---
 
+Para modelar la serie de tiempo con técnicas de Deep Learning, se requiere realizar una preparación cuidadosa de los datos y la configuración de modelos neuronales. En este caso, se utiliza la librería TensorFlow para implementar diferentes tipos de modelos, como Redes Neuronales Multicapa (MLP) y Redes Neuronales Recurrentes (LSTM, RNN), dado que estas arquitecturas son efectivas para capturar patrones no lineales y dependencias temporales en los datos.
+
 # Importar librerías 
+
+Se importan las librerías necesarias para el modelado, como TensorFlow para la construcción de modelos neuronales, Scikeras para la integración de los modelos con sklearn y Plotly para la visualización de resultados. Además, se emplean herramientas estadísticas y métricas de evaluación para medir el rendimiento de los modelos y realizar diagnósticos de los residuos.
 
 ``` {python}
 import pandas as pd
@@ -36,6 +40,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="keras.layers.cor
 
 # Importar datos
 
+En este caso, se carga un archivo con los datos preparados (btc_models.csv), que contiene las características necesarias para entrenar los modelos neuronales y evaluar su rendimiento. El dataset incluye variables transformadas y seleccionadas para capturar tanto la estructura temporal como la información relevante de la serie de precios de Bitcoin.
+
 ``` {python}
 btc = pd.read_csv('data/btc_models.csv')
 
@@ -54,7 +60,15 @@ btc['Date'] = pd.to_datetime(btc['Date'], format='%Y-%m-%d')
 btc.info()
 ```
 
+# Objetivo
+
+El objetivo principal de los modelos de Deep Learning es capturar patrones no lineales y dependencias temporales en los datos del Bitcoin, mejorando la capacidad predictiva sobre otros enfoques tradicionales. Para ello, se configurarán y entrenarán distintas arquitecturas neuronales, optimizando sus hiperparámetros y evaluando su desempeño mediante métricas como el error absoluto medio (MAE), el error cuadrático medio (MSE) y la proporción explicada (R²). Además, se aplicarán diagnósticos de los residuos para verificar la calidad de las predicciones y detectar posibles sesgos o errores sistemáticos en los modelos.
+
 # Obtención de las series de tiempo y conjuntos de prueba, validación y entrenamiento
+
+En esta sección se dividen los datos de las series de tiempo de Bitcoin en conjuntos de entrenamiento, validación y prueba para diferentes horizontes de tiempo (lags o τ). Este proceso es crucial para el entrenamiento de modelos de Deep Learning que se basan en dependencias temporales, como las redes recurrentes o los LSTM.
+
+Dividir los datos en conjuntos de entrenamiento, validación y prueba es fundamental para garantizar que los modelos se entrenen correctamente, evitando el sobreajuste y evaluando su rendimiento en datos no vistos. Además, trabajar con múltiples valores de τ permite explorar la influencia del horizonte temporal en la capacidad predictiva del modelo, lo cual es esencial en series de tiempo con fluctuaciones a corto y largo plazo.
 
 ``` {python}
 def split_dataset(df: pd.DataFrame, tau: int, column: str) -> list:
@@ -419,6 +433,8 @@ fig_p.write_html('graphs/price_folds.html')
 </iframe>
 ```
 
+En esta visualización, se dividen los datos de precios en cuatro pliegues distintos, con cada pliegue utilizando una combinación específica de períodos de entrenamiento, validación y prueba. En cada pliegue, la sección morada representa los datos de entrenamiento, la sección azul claro corresponde a los datos de validación y la sección amarilla indica los datos de prueba. La estructura de estos pliegues asegura que todas las particiones del tiempo sean cubiertas, lo cual es esencial para evitar el sesgo temporal y evaluar correctamente la capacidad de generalización del modelo.
+
 ## Pliegues del retorno acumulado
 
 ``` {python}
@@ -441,6 +457,104 @@ fig_p.write_html('graphs/returncumsum_folds.html')
 >
 </iframe>
 ```
+
+Los pliegues del retorno acumulado muestran una estructura similar a la de los precios, pero se enfocan en la serie temporal de retornos. Aquí, cada pliegue también cubre los períodos de entrenamiento, validación y prueba, lo cual es clave para evaluar cómo los modelos capturan la variabilidad y las tendencias de los retornos acumulados.
+
+## Pliegues de la volatilidad
+
+### σ = 7
+
+``` {python}
+#| output: false
+fig_p = plot_folds(price, tau_v, 'σ_7')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/vol7_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/vol7_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable de volatidilidad cuando σ = 7'
+>
+</iframe>
+```
+
+### σ = 14
+
+``` {python}
+#| output: false
+fig_p = plot_folds(price, tau_v, 'σ_14')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/vol14_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/vol14_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable de volatidilidad cuando σ = 14'
+>
+</iframe>
+```
+
+### σ = 21
+
+``` {python}
+#| output: false
+fig_p = plot_folds(price, tau_v, 'σ_21')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/vol21_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/vol21_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable de volatidilidad cuando σ = 21'
+>
+</iframe>
+```
+
+### σ = 28
+
+``` {python}
+#| output: false
+fig_p = plot_folds(price, tau_v, 'σ_28')
+fig_p.show()
+```
+
+``` {python}
+#| echo: false
+fig_p.write_html('graphs/vol28_folds.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/vol28_folds.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de los folds para la variable de volatidilidad cuando σ = 28'
+>
+</iframe>
+```
+
+En las visualizaciones de pliegues para σ_7, σ_14, σ_21 y σ_28, se presentan las divisiones para distintas medidas de volatilidad con diferentes valores de τ. Cada pliegue sigue la misma estructura de entrenamiento, validación y prueba, lo cual permite examinar cómo los modelos responden a los cambios en la volatilidad a lo largo de distintos horizontes temporales.
 
 # Modelos de Deep Learning
 
@@ -576,7 +690,7 @@ models = build_model('MLP', 'price', dim, neurons, dropouts, best_activation, be
 ```
 
 ``` {python}
-def best_model(models, X_val, y_val):
+def best_model(var, models, X_val, y_val):
     results = []
 
     for i, model in enumerate(models):
@@ -597,7 +711,7 @@ def best_model(models, X_val, y_val):
         print(f'Modelo {i}: MSE = {mse:.4f}')
 
         results.append({
-            "Model Name": f'MLP_Price_{i}',
+            "Model Name": f'MLP_{var}_{i}',
             "MAPE": mape,
             "MAE": mae,
             "RMSE": rmse,
@@ -612,7 +726,7 @@ def best_model(models, X_val, y_val):
 ```
 
 ``` {python}
-mlp_p7_metrics = best_model(models, price[0][2], price[0][3])
+mlp_p7_metrics = best_model('price', models, price[0][2], price[0][3])
 
 mlp_p7_metrics
 ```
@@ -639,7 +753,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'price', dim, neurons, dropouts, best_activation, best_mu, 14)
 
-mlp_p14_metrics = best_model(models, price[1][2], price[1][3])
+mlp_p14_metrics = best_model('price', models, price[1][2], price[1][3])
 mlp_p14_metrics
 ```
 
@@ -665,7 +779,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'price', dim, neurons, dropouts, best_activation, best_mu, 21)
 
-mlp_p21_metrics = best_model(models, price[2][2], price[2][3])
+mlp_p21_metrics = best_model('price', models, price[2][2], price[2][3])
 mlp_p21_metrics
 ```
 
@@ -691,7 +805,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'price', dim, neurons, dropouts, best_activation, best_mu, 28)
 
-mlp_p28_metrics = best_model(models, price[3][2], price[3][3])
+mlp_p28_metrics = best_model('price', models, price[3][2], price[3][3])
 mlp_p28_metrics
 ```
 
@@ -719,7 +833,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'retorno', dim, neurons, dropouts, best_activation, best_mu, 7)
 
-mlp_at7_metrics = best_model(models, at[0][2], at[0][3])
+mlp_at7_metrics = best_model('at', models, at[0][2], at[0][3])
 mlp_at7_metrics
 ```
 
@@ -745,7 +859,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'retorno', dim, neurons, dropouts, best_activation, best_mu, 14)
 
-mlp_at14_metrics = best_model(models, at[1][2], at[1][3])
+mlp_at14_metrics = best_model('at', models, at[1][2], at[1][3])
 mlp_at14_metrics
 ```
 
@@ -771,7 +885,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'retorno', dim, neurons, dropouts, best_activation, best_mu, 21)
 
-mlp_at21_metrics = best_model(models, at[2][2], at[2][3])
+mlp_at21_metrics = best_model('at', models, at[2][2], at[2][3])
 mlp_at21_metrics
 ```
 
@@ -797,7 +911,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'retorno', dim, neurons, dropouts, best_activation, best_mu, 28)
 
-mlp_at28_metrics = best_model(models, at[3][2], at[3][3])
+mlp_at28_metrics = best_model('at', models, at[3][2], at[3][3])
 mlp_at28_metrics
 ```
 
@@ -827,7 +941,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 7, 7)
 
-mlp_vol7_7_metrics = best_model(models, vo_7[0][2], vo_7[0][3])
+mlp_vol7_7_metrics = best_model('vol7', models, vo_7[0][2], vo_7[0][3])
 mlp_vol7_7_metrics
 ```
 
@@ -853,7 +967,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 14, 7)
 
-mlp_vol7_14_metrics = best_model(models, vo_7[1][2], vo_7[1][3])
+mlp_vol7_14_metrics = best_model('vol7', models, vo_7[1][2], vo_7[1][3])
 mlp_vol7_14_metrics
 ```
 
@@ -879,7 +993,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 21, 7)
 
-mlp_vol7_21_metrics = best_model(models, vo_7[2][2], vo_7[2][3])
+mlp_vol7_21_metrics = best_model('vol7', models, vo_7[2][2], vo_7[2][3])
 mlp_vol7_21_metrics
 ```
 
@@ -905,7 +1019,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 28, 7)
 
-mlp_vol7_28_metrics = best_model(models, vo_7[3][2], vo_7[3][3])
+mlp_vol7_28_metrics = best_model('vol7', models, vo_7[3][2], vo_7[3][3])
 mlp_vol7_28_metrics
 ```
 
@@ -933,7 +1047,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 7, 14)
 
-mlp_vol14_7_metrics = best_model(models, vo_14[0][2], vo_14[0][3])
+mlp_vol14_7_metrics = best_model('vol14', models, vo_14[0][2], vo_14[0][3])
 mlp_vol14_7_metrics
 ```
 
@@ -959,7 +1073,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 14, 14)
 
-mlp_vol14_14_metrics = best_model(models, vo_14[1][2], vo_14[1][3])
+mlp_vol14_14_metrics = best_model('vol14', models, vo_14[1][2], vo_14[1][3])
 mlp_vol14_14_metrics
 ```
 
@@ -985,7 +1099,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 21, 14)
 
-mlp_vol14_21_metrics = best_model(models, vo_14[2][2], vo_14[2][3])
+mlp_vol14_21_metrics = best_model('vol14', models, vo_14[2][2], vo_14[2][3])
 mlp_vol14_21_metrics
 ```
 
@@ -1011,7 +1125,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 28, 14)
 
-mlp_vol14_28_metrics = best_model(models, vo_14[3][2], vo_14[3][3])
+mlp_vol14_28_metrics = best_model('vol14', models, vo_14[3][2], vo_14[3][3])
 mlp_vol14_28_metrics
 ```
 
@@ -1039,7 +1153,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 7, 21)
 
-mlp_vol21_7_metrics = best_model(models, vo_21[0][2], vo_21[0][3])
+mlp_vol21_7_metrics = best_model('vol21', models, vo_21[0][2], vo_21[0][3])
 mlp_vol21_7_metrics
 ```
 
@@ -1065,7 +1179,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 14, 21)
 
-mlp_vol21_14_metrics = best_model(models, vo_21[1][2], vo_21[1][3])
+mlp_vol21_14_metrics = best_model('vol21', models, vo_21[1][2], vo_21[1][3])
 mlp_vol21_14_metrics
 ```
 
@@ -1091,7 +1205,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 21, 21)
 
-mlp_vol21_21_metrics = best_model(models, vo_21[2][2], vo_21[2][3])
+mlp_vol21_21_metrics = best_model('vol21', models, vo_21[2][2], vo_21[2][3])
 mlp_vol21_21_metrics
 ```
 
@@ -1117,7 +1231,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 28, 21)
 
-mlp_vol21_28_metrics = best_model(models, vo_21[3][2], vo_21[3][3])
+mlp_vol21_28_metrics = best_model('vol21', models, vo_21[3][2], vo_21[3][3])
 mlp_vol21_28_metrics
 ```
 
@@ -1145,7 +1259,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 7, 28)
 
-mlp_vol28_7_metrics = best_model(models, vo_28[0][2], vo_28[0][3])
+mlp_vol28_7_metrics = best_model('vol28', models, vo_28[0][2], vo_28[0][3])
 mlp_vol28_7_metrics
 ```
 
@@ -1171,7 +1285,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 14, 28)
 
-mlp_vol28_14_metrics = best_model(models, vo_28[1][2], vo_28[1][3])
+mlp_vol28_14_metrics = best_model('vol28', models, vo_28[1][2], vo_28[1][3])
 mlp_vol28_14_metrics
 ```
 
@@ -1197,7 +1311,7 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 21, 28)
 
-mlp_vol28_21_metrics = best_model(models, vo_28[2][2], vo_28[2][3])
+mlp_vol28_21_metrics = best_model('vol28', models, vo_28[2][2], vo_28[2][3])
 mlp_vol28_21_metrics
 ```
 
@@ -1223,6 +1337,45 @@ print(f"Mejor Puntuación: {best_score}")
 ``` {python}
 models = build_model('MLP', 'volatilidad', dim, neurons, dropouts, best_activation, best_mu, 28, 28)
 
-mlp_vol28_28_metrics = best_model(models, vo_28[3][2], vo_28[3][3])
+mlp_vol28_28_metrics = best_model('vol28', models, vo_28[3][2], vo_28[3][3])
 mlp_vol28_28_metrics
 ```
+
+### Selección del mejor modelo MLP
+
+``` {python}
+metric_vars = [
+    'mlp_p7_metrics', 'mlp_p14_metrics', 'mlp_p21_metrics', 'mlp_p28_metrics',
+    'mlp_at7_metrics', 'mlp_at14_metrics', 'mlp_at21_metrics', 'mlp_at28_metrics',
+    'mlp_vol7_7_metrics', 'mlp_vol7_14_metrics', 'mlp_vol7_21_metrics', 'mlp_vol7_28_metrics',
+    'mlp_vol14_7_metrics', 'mlp_vol14_14_metrics', 'mlp_vol14_21_metrics', 'mlp_vol14_28_metrics',
+    'mlp_vol21_7_metrics', 'mlp_vol21_14_metrics', 'mlp_vol21_21_metrics', 'mlp_vol21_28_metrics',
+    'mlp_vol28_7_metrics', 'mlp_vol28_14_metrics', 'mlp_vol28_21_metrics', 'mlp_vol28_28_metrics'
+]
+
+def get_best_metrics(metrics, s_by = 'MSE'):
+    return metrics.sort_values(by = s_by).iloc[0]
+
+summary = pd.DataFrame()
+
+for var in metric_vars:
+    metric = globals()[var]
+
+    best_metric = get_best_metrics(metric)
+    best_metric['Model'] = var
+
+    summary = pd.concat([summary, best_metric.to_frame().T], ignore_index = True)
+
+summary = summary.drop(columns = ['Model Name'])
+summary
+```
+
+``` {python}
+best = [
+    'mlp_p28_metrics', 'mp_at7_metrics', 'mlp_vol7_28_metrics', 
+    'mlp_vol14_28_metrics', 'mlp_vol21_28_metrics', 'mlp_vol28_28_metrics'
+]
+
+summary = summary[summary['Model'].isin(best)]
+summary
+``` 

@@ -1,0 +1,5794 @@
+---
+title: "Modelos estadísticos"
+---
+
+En este capítulo construiremos distintos modelos estadísticos estudiantes durante el módulo de series de tiempo para la predicción de distintas variables obtenidas a partir del conjunto de datos de las acciones del Bitcoin. Los modelos estadísticos que se construirán en este reporte serán: 
+
+1. Simple Exponential Smoothing
+2. Double Exponential Smoothing
+3. ARIMA
+4. GARCH
+
+Tal que para los modelos de suavización exponencial se construirán a mano y usando la librería de `statsmodels.tsa.holterwinters` para comparar resultados. Y, para los modelos _ARIMA_ y _GARCH_ construiremos utilizando la técnica de `rolling` al igual que sin aplicarla. 
+
+# Importar librerías
+
+``` {python}
+import pandas as pd
+import numpy as np
+import pickle
+
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import mean_absolute_percentage_error, mean_absolute_error, mean_squared_error, r2_score
+
+from scipy.stats import jarque_bera
+
+from statsmodels.stats.diagnostic import acorr_ljungbox
+import statsmodels.api as sm
+from statsmodels.tsa.holtwinters import ExponentialSmoothing as ExponentialSmoothingLib
+
+import warnings
+from typing import List, Tuple, Optional
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", message="No frequency information was provided")
+```
+
+# Importar datos
+
+En este caso, se carga un archivo con los datos preparados (btc_models.csv), que contiene las características necesarias para entrenar los modelos neuronales y evaluar su rendimiento. El dataset incluye variables transformadas y seleccionadas para capturar tanto la estructura temporal como la información relevante de la serie de precios de Bitcoin.
+
+``` {python}
+df = pd.read_csv('data/btc_models.csv')
+btc = df.sort_values(by='Date').copy()
+btc = btc.reset_index(drop = True)
+
+btc = btc.fillna(0)
+btc
+```
+
+``` {python}
+btc.info()
+```
+
+``` {python}
+btc = btc.fillna(0)
+
+btc['Date'] = pd.to_datetime(btc['Date'], format='%Y-%m-%d')
+
+btc.set_index('Date', inplace = True)
+
+btc.info()
+```
+
+# Series de tiempo y separación de los conjuntos de datos
+
+En esta sección se construirán las series de tiempo para cada una de las variables objetico (precio, retorno acumulado y volatilidad en cada uno de los retornos diarios construidos). Además, se crearán los conjuntos de datos de entrenamiento, validación y test para los modelos estadísticos que estaremos construyendo en este capítulo.
+
+Inicialmente, construiremos una función que usaremos para la separación de nuestros conjuntos de datos. Tengamos en cuenta que pare este ejercicio nuestras ventanas de tiempo serán $\omega =$ 7, 14, 21 y 28.
+
+``` {python}
+def split_dataset(data: pd.DataFrame, name: str, w: int, N_val: int = 28, N_test: int = 28) -> Tuple[pd.Series, pd.Series, pd.Series, int]:
+    N_train = len(data) - N_val - N_test
+
+    train = data[name].iloc[:N_train]
+    val = data[name].iloc[N_train:N_train + w]
+    test = data[name].iloc[N_train + w:N_train + 2 * w]
+
+    print(f'Tamaños de los conjuntos de datos para la variable {name.lower()} con τ = {w}')
+    print(f'Conjunto de entrenamiento: {len(train)}')
+    print(f'Conjunto de validación: {len(val)}')
+    print(f'Conjunto de prueba: {len(test)}')
+    print()
+
+    return train, val, test, w
+```
+
+Ahora, pasemos a construir nuestras series de tiempo para cada variable.
+
+## Variable Price
+
+``` {python}
+price7 = split_dataset(btc, 'Price', 7)
+price14 = split_dataset(btc, 'Price', 14)
+price21 = split_dataset(btc, 'Price', 21)
+price28 = split_dataset(btc, 'Price', 28)
+```
+
+## Variable retorno acumulado
+
+``` {python}
+A_t7 = split_dataset(btc, 'A_t', 7)
+A_t14 = split_dataset(btc, 'A_t', 14)
+A_t21 = split_dataset(btc, 'A_t', 21)
+A_t28 = split_dataset(btc, 'A_t', 28)
+```
+
+## Variable volatilidad
+
+### $\sigma$ tal que $\omega = 7$
+
+``` {python}
+vol7_7 = split_dataset(btc, 'σ_7', 7)
+vol7_14 = split_dataset(btc, 'σ_7', 14)
+vol7_21 = split_dataset(btc, 'σ_7', 21)
+vol7_28 = split_dataset(btc, 'σ_7', 28)
+```
+
+### $\sigma$ tal que $\omega = 14$
+
+``` {python}
+vol14_7 = split_dataset(btc, 'σ_14', 7)
+vol14_14 = split_dataset(btc, 'σ_14', 14)
+vol14_21 = split_dataset(btc, 'σ_14', 21)
+vol14_28 = split_dataset(btc, 'σ_14', 28)
+```
+
+### $\sigma$ tal que $\omega = 21$
+
+``` {python}
+vol21_7 = split_dataset(btc, 'σ_21', 7)
+vol21_14 = split_dataset(btc, 'σ_21', 14)
+vol21_21 = split_dataset(btc, 'σ_21', 21)
+vol21_28 = split_dataset(btc, 'σ_21', 28)
+```
+
+### $\sigma$ tal que $\omega = 28$
+
+``` {python}
+vol28_7 = split_dataset(btc, 'σ_28', 7)
+vol28_14 = split_dataset(btc, 'σ_28', 14)
+vol28_21 = split_dataset(btc, 'σ_28', 21)
+vol28_28 = split_dataset(btc, 'σ_28', 28)
+```
+
+# Aplicación de los modelos estadísticos
+
+Luego de construir nuestros conjuntos de datos para cada una de las variables de interés podemos proceder a construir los modelos estadísticos mencionados al inicio de este capítulo. De esta forma, luego de obtener los resultados podremos evaluar cuál modelo captura la tendencia con mayor precisión para las variables objetivo.
+
+## Exponential Smoothing
+
+Sabemos que una suavización exponencial está dada por: 
+
+$$
+\tilde{y} = \lambda y_T + (1 - \lambda) \tilde{y}_{T - 1}
+$$
+
+tal que $\lambda$ es nuestro parámetro a optimizar en este tipo de modelos. Además, note que $\tilde{y}$ es nuestra serie de tiempo suavizada de forma que $y_T = \tilde{y}^{0}$.
+
+Para obtener nuestras suavizaciones sin librería construyamos algunas funciones importantes para su construcción: 
+
+``` {python}
+class ExponentialSmoothing:
+    def __init__(self, data: pd.Series, param: float, start: Optional[float] = None):
+        self.data = data
+        self.param = param
+        self.start = start if start is not None else data.iloc[0]
+
+    def smooth(self) -> pd.Series:
+        y = self.data.copy()
+        y.iloc[0] = self.param * y.iloc[0] + (1 - self.param) * self.start
+
+        for i in range(1, len(y)):
+            y.iloc[i] = self.param * y.iloc[i] + (1 - self.param) * y.iloc[i - 1]
+
+        return y
+
+    def evaluate(self, smoothed_data: Optional[pd.Series] = None) -> pd.DataFrame:
+        if smoothed_data is None:
+            smoothed_data = self.smooth()
+
+        T = len(self.data)
+        actual_values = self.data.values
+        predicted_values = pd.concat([pd.Series([self.data.iloc[0]]), smoothed_data.iloc[:-1]], ignore_index=True).values
+        error = actual_values - predicted_values
+        mean_actual = np.mean(actual_values)
+
+        SSE = sum(error**2)
+        MAPE = 100 * sum(abs(error / actual_values)) / T
+        MAE = np.mean(np.abs(error))
+        MSE = SSE / T
+        RMSE = np.sqrt(MSE)
+        R2 = 1 - (SSE / (np.sum((actual_values - mean_actual) ** 2)))
+
+
+        return pd.DataFrame({
+            'MAPE': [MAPE],
+            'MAE': [MAE],
+            'RMSE': [RMSE],
+            'MSE': [MSE],
+            'R2': [R2]
+        })
+
+    def optimize_param(self) -> float:
+        smoothed_data = self.smooth()
+        return self.evaluate(smoothed_data)['MAE'].values[0]
+
+    def calculate_metrics(self, y: pd.Series, y_pred: pd.Series, metric_name: str, case: str) -> pd.DataFrame:
+        residuals = y - y_pred
+        metrics_df = self.evaluate(y_pred)
+        metrics_df.index = metrics_df.index.map({0: f'{metric_name} {case}'})
+        
+        max_lag = min(10, len(residuals) - 1)
+        if max_lag > 0:
+            ljung_box_pval = acorr_ljungbox(residuals, lags=[max_lag], return_df=True)['lb_pvalue'].iloc[0]
+        else:
+            ljung_box_pval = np.nan
+
+        jb_pvalue = jarque_bera(residuals)[1]
+        
+        metrics_df['Ljung-Box p-value'] = ljung_box_pval
+        metrics_df['Jarque-Bera p-value'] = jb_pvalue
+        return metrics_df, residuals
+
+    def plot_residuals(self, residuals: pd.Series, model_name: str):
+        fig, ax = plt.subplots(figsize=(8.6, 5))
+        ax.plot(residuals.index, residuals.values, color='#1f77b4', linestyle='-', marker='o', markersize=2)
+        ax.set_title(f'{model_name}', fontsize=14)
+        ax.set_xlabel('Índice', fontsize=12)
+        ax.set_ylabel('Residuo', fontsize=12)
+        ax.grid(True, linestyle='--', alpha=0.7)
+        plt.show()
+
+    def plot_diagnostics(self, residuals: pd.Series, model_name: str):
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(7.6, 6))
+        sm.qqplot(residuals, line='s', ax=axes[0])
+        axes[0].set_title('QQ Plot de los Residuos')
+        sm.graphics.tsa.plot_pacf(residuals, lags=30, ax=axes[1])
+        axes[1].set_title('Autocorrelación Parcial de los Residuos')
+        plt.suptitle(f'{model_name}', fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.show()
+
+    def residuals(self, model_name: str, metric_name: str, case: str, y: pd.Series, y_pred: pd.Series, show_info: bool = False) -> pd.DataFrame:
+        metrics_df, residuals = self.calculate_metrics(y, y_pred, metric_name, case)
+
+        if show_info:
+            self.plot_residuals(residuals, model_name)
+            self.plot_diagnostics(residuals, model_name)
+
+            ljung_box_pval = metrics_df['Ljung-Box p-value'].iloc[0]
+            jb_pvalue = metrics_df['Jarque-Bera p-value'].iloc[0]
+
+            if ljung_box_pval > 0.05:
+                print('No se rechaza H0: los residuales son independientes (no correlacionados).')
+            else:
+                print('Se rechaza H0: hay autocorrelación en los residuales.')
+
+            print(f'Jarque-Bera p-value: {jb_pvalue}')
+            if jb_pvalue > 0.05:
+                print('No se rechaza H0: los residuales siguen una distribución normal.')
+            else:
+                print('Se rechaza H0: los residuales no siguen una distribución normal.')
+
+        return metrics_df
+
+    def plot_preds(self, y_train: pd.Series, y_val: pd.Series, y_test: pd.Series,
+                            y_pred_train: pd.Series, y_pred_val: pd.Series, y_pred_test: pd.Series):
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(x=y_train[-250:].index, y=y_train[-250:], mode='lines', name='y_train', line=dict(color='#FDDBBB', dash = 'dash')))
+        fig.add_trace(go.Scatter(x=y_val.index, y=y_val, mode='lines', name='y_val', line=dict(color='#BFECFF', dash = 'dash')))
+        fig.add_trace(go.Scatter(x=y_test.index, y=y_test, mode='lines', name='y_test', line=dict(color='#C9E9D2', dash = 'dash')))
+
+        fig.add_trace(go.Scatter(x=y_pred_train[-250:].index, y=y_pred_train[-250:], mode='lines', name='y_pred_train',
+                                 line=dict(color='#CB9DF0', dash='dash')))
+        fig.add_trace(go.Scatter(x=y_pred_val.index, y=y_pred_val, mode='lines', name='y_pred_val',
+                                 line=dict(color='#FFCCEA', dash='dash')))
+        fig.add_trace(go.Scatter(x=y_pred_test.index, y=y_pred_test, mode='lines', name='y_pred_test',
+                                 line=dict(color='#EEEEEE', dash='dash')))
+
+        fig.update_layout(
+            title="Comparación de y v.s. y_pred",
+            xaxis_title="",
+            yaxis_title="",
+            legend_title="Series",
+            margin={'b': 0, 'r': 30, 'l': 30, 't': 80},
+            plot_bgcolor='rgba(0, 0, 0, 0.0)',
+            paper_bgcolor='rgba(0, 0, 0, 0.0)',
+            font_color="white",
+            hoverlabel=dict(
+                bgcolor="#222"
+            ),
+            xaxis=dict(gridcolor='#222', tickfont=dict(color='white')),
+            yaxis=dict(gridcolor='#222', tickfont=dict(color='white')),
+        )
+
+        return fig
+```
+
+Para encontrar el mejor modelo y optimizar el hiperparámetro $\lambda$ evaluaremos nuestro modelo para $\lambda$ = 0.1, 0.2, 0.3, ..., 1. De esta forma, creemos nuestro vector de posibles parámetros
+
+``` {python}
+params = np.arange(0.1, 1, 0.1)
+```
+
+### Caso simple sin librería
+
+#### Price
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(price7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price7[0], best_param)
+price7_se = model.smooth()
+
+metrics_price7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', price7[0], price7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price7[1], best_param)
+price7_se_val = model.smooth()
+
+model = ExponentialSmoothing(price7[2], best_param)
+price7_se_test = model.smooth()
+
+metrics_price7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', price7[1], price7_se_val)
+metrics_price7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', price7[2], price7_se_test)
+
+pd.concat([metrics_price7, metrics_price7_val, metrics_price7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price7[0][-500:], price7[1], price7[2], price7_se, price7_se_val, price7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price14[0], best_param)
+price14_se = model.smooth()
+
+metrics_price14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', price14[0], price14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price14[1], best_param)
+price14_se_val = model.smooth()
+
+model = ExponentialSmoothing(price14[2], best_param)
+price14_se_test = model.smooth()
+
+metrics_price14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', price14[1], price14_se_val)
+metrics_price14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', price14[2], price14_se_test)
+
+pd.concat([metrics_price14, metrics_price14_val, metrics_price14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price14[0][-500:], price14[1], price14[2], price14_se, price14_se_val, price14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price21[0], best_param)
+price21_se = model.smooth()
+
+metrics_price21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', price21[0], price21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price21[1], best_param)
+price21_se_val = model.smooth()
+
+model = ExponentialSmoothing(price21[2], best_param)
+price21_se_test = model.smooth()
+
+metrics_price21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', price21[1], price21_se_val)
+metrics_price21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', price21[2], price21_se_test)
+
+pd.concat([metrics_price21, metrics_price21_val, metrics_price21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price21[0][-500:], price21[1], price21[2], price21_se, price21_se_val, price21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price28[0], best_param)
+price28_se = model.smooth()
+
+metrics_price28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', price28[0], price28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price28[1], best_param)
+price28_se_val = model.smooth()
+
+model = ExponentialSmoothing(price28[2], best_param)
+price28_se_test = model.smooth()
+
+metrics_price28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', price28[1], price28_se_val)
+metrics_price28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', price28[2], price28_se_test)
+
+pd.concat([metrics_price28, metrics_price28_val, metrics_price28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price28[0][-500:], price28[1], price28[2], price28_se, price28_se_val, price28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_price = pd.concat([
+    metrics_price7, metrics_price7_val, metrics_price7_test,
+    metrics_price14, metrics_price14_val, metrics_price14_test,
+    metrics_price21, metrics_price21_val, metrics_price21_test,
+    metrics_price28, metrics_price28_val, metrics_price28_test
+])
+```
+
+#### Retorno acumulado
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(A_t7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t7[0], best_param)
+A_t7_se = model.smooth()
+
+metrics_A_t7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', A_t7[0], A_t7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t7[1], best_param)
+A_t7_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t7[2], best_param)
+A_t7_se_test = model.smooth()
+
+metrics_A_t7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', A_t7[1], A_t7_se_val)
+metrics_A_t7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', A_t7[2], A_t7_se_test)
+
+pd.concat([metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t7[0][-500:], A_t7[1], A_t7[2], A_t7_se, A_t7_se_val, A_t7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t14[0], best_param)
+A_t14_se = model.smooth()
+
+metrics_A_t14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', A_t14[0], A_t14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t14[1], best_param)
+A_t14_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t14[2], best_param)
+A_t14_se_test = model.smooth()
+
+metrics_A_t14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', A_t14[1], A_t14_se_val)
+metrics_A_t14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', A_t14[2], A_t14_se_test)
+
+pd.concat([metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t14[0][-500:], A_t14[1], A_t14[2], A_t14_se, A_t14_se_val, A_t14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t21[0], best_param)
+A_t21_se = model.smooth()
+
+metrics_A_t21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', A_t21[0], A_t21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t21[1], best_param)
+A_t21_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t21[2], best_param)
+A_t21_se_test = model.smooth()
+
+metrics_A_t21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', A_t21[1], A_t21_se_val)
+metrics_A_t21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', A_t21[2], A_t21_se_test)
+
+pd.concat([metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t21[0][-500:], A_t21[1], A_t21[2], A_t21_se, A_t21_se_val, A_t21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t28[0], best_param)
+A_t28_se = model.smooth()
+
+metrics_A_t28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', A_t28[0], A_t28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t28[1], best_param)
+A_t28_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t28[2], best_param)
+A_t28_se_test = model.smooth()
+
+metrics_A_t28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', A_t28[1], A_t28_se_val)
+metrics_A_t28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', A_t28[2], A_t28_se_test)
+
+pd.concat([metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t28[0][-500:], A_t28[1], A_t28[2], A_t28_se, A_t28_se_val, A_t28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_A_t = pd.concat([
+    metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test,
+    metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test,
+    metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test,
+    metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test
+])
+```
+
+#### Volatilidad $\omega = 7$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol7_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_7[0], best_param)
+vol7_7_se = model.smooth()
+
+metrics_vol7_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol7_7[0], vol7_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_7[1], best_param)
+vol7_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_7[2], best_param)
+vol7_7_se_test = model.smooth()
+
+metrics_vol7_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol7_7[1], vol7_7_se_val)
+metrics_vol7_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol7_7[2], vol7_7_se_test)
+
+pd.concat([metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_7[0][-500:], vol7_7[1], vol7_7[2], vol7_7_se, vol7_7_se_val, vol7_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_14[0], best_param)
+vol7_14_se = model.smooth()
+
+metrics_vol7_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol7_14[0], vol7_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_14[1], best_param)
+vol7_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_14[2], best_param)
+vol7_14_se_test = model.smooth()
+
+metrics_vol7_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol7_14[1], vol7_14_se_val)
+metrics_vol7_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol7_14[2], vol7_14_se_test)
+
+pd.concat([metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_14[0][-500:], vol7_14[1], vol7_14[2], vol7_14_se, vol7_14_se_val, vol7_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_21[0], best_param)
+vol7_21_se = model.smooth()
+
+metrics_vol7_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol7_21[0], vol7_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_21[1], best_param)
+vol7_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_21[2], best_param)
+vol7_21_se_test = model.smooth()
+
+metrics_vol7_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol7_21[1], vol7_21_se_val)
+metrics_vol7_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol7_21[2], vol7_21_se_test)
+
+pd.concat([metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_21[0][-500:], vol7_21[1], vol7_21[2], vol7_21_se, vol7_21_se_val, vol7_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_28[0], best_param)
+vol7_28_se = model.smooth()
+
+metrics_vol7_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol7_28[0], vol7_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_28[1], best_param)
+vol7_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_28[2], best_param)
+vol7_28_se_test = model.smooth()
+
+metrics_vol7_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol7_28[1], vol7_28_se_val)
+metrics_vol7_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol7_28[2], vol7_28_se_test)
+
+pd.concat([metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_28[0][-500:], vol7_28[1], vol7_28[2], vol7_28_se, vol7_28_se_val, vol7_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol7 = pd.concat([
+    metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test,
+    metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test,
+    metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test,
+    metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test
+])
+```
+
+#### Volatilidad $\omega = 14$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol14_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[0], best_param)
+vol14_7_se = model.smooth()
+
+metrics_vol14_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol14_7[0], vol14_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[1], best_param)
+vol14_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_7[2], best_param)
+vol14_7_se_test = model.smooth()
+
+metrics_vol14_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol14_7[1], vol14_7_se_val)
+metrics_vol14_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol14_7[2], vol14_7_se_test)
+
+pd.concat([metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_7[0][-500:], vol14_7[1], vol14_7[2], vol14_7_se, vol14_7_se_val, vol14_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[0], best_param)
+vol14_14_se = model.smooth()
+
+metrics_vol14_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol14_14[0], vol14_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[1], best_param)
+vol14_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_14[2], best_param)
+vol14_14_se_test = model.smooth()
+
+metrics_vol14_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol14_14[1], vol14_14_se_val)
+metrics_vol14_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol14_14[2], vol14_14_se_test)
+
+pd.concat([metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_14[0][-500:], vol14_14[1], vol14_14[2], vol14_14_se, vol14_14_se_val, vol14_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[0], best_param)
+vol14_21_se = model.smooth()
+
+metrics_vol14_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol14_21[0], vol14_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[1], best_param)
+vol14_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_21[2], best_param)
+vol14_21_se_test = model.smooth()
+
+metrics_vol14_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol14_21[1], vol14_21_se_val)
+metrics_vol14_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol14_21[2], vol14_21_se_test)
+
+pd.concat([metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_21[0][-500:], vol14_21[1], vol14_21[2], vol14_21_se, vol14_21_se_val, vol14_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[0], best_param)
+vol14_28_se = model.smooth()
+
+metrics_vol14_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol14_28[0], vol14_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[1], best_param)
+vol14_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_28[2], best_param)
+vol14_28_se_test = model.smooth()
+
+metrics_vol14_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol14_28[1], vol14_28_se_val)
+metrics_vol14_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol14_28[2], vol14_28_se_test)
+
+pd.concat([metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_28[0][-500:], vol14_28[1], vol14_28[2], vol14_28_se, vol14_28_se_val, vol14_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol14 = pd.concat([
+    metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test,
+    metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test,
+    metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test,
+    metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test
+])
+```
+
+#### Volatilidad $\omega = 21$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol21_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[0], best_param)
+vol21_7_se = model.smooth()
+
+metrics_vol21_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol21_7[0], vol21_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[1], best_param)
+vol21_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_7[2], best_param)
+vol21_7_se_test = model.smooth()
+
+metrics_vol21_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol21_7[1], vol21_7_se_val)
+metrics_vol21_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol21_7[2], vol21_7_se_test)
+
+pd.concat([metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_7[0][-500:], vol21_7[1], vol21_7[2], vol21_7_se, vol21_7_se_val, vol21_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[0], best_param)
+vol21_14_se = model.smooth()
+
+metrics_vol21_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol21_14[0], vol21_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[1], best_param)
+vol21_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_14[2], best_param)
+vol21_14_se_test = model.smooth()
+
+metrics_vol21_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol21_14[1], vol21_14_se_val)
+metrics_vol21_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol21_14[2], vol21_14_se_test)
+
+pd.concat([metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_14[0][-500:], vol21_14[1], vol21_14[2], vol21_14_se, vol21_14_se_val, vol21_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[0], best_param)
+vol21_21_se = model.smooth()
+
+metrics_vol21_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol21_21[0], vol21_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[1], best_param)
+vol21_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_21[2], best_param)
+vol21_21_se_test = model.smooth()
+
+metrics_vol21_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol21_21[1], vol21_21_se_val)
+metrics_vol21_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol21_21[2], vol21_21_se_test)
+
+pd.concat([metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_21[0][-500:], vol21_21[1], vol21_21[2], vol21_21_se, vol21_21_se_val, vol21_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[0], best_param)
+vol21_28_se = model.smooth()
+
+metrics_vol21_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol21_28[0], vol21_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[1], best_param)
+vol21_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_28[2], best_param)
+vol21_28_se_test = model.smooth()
+
+metrics_vol21_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol21_28[1], vol21_28_se_val)
+metrics_vol21_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol21_28[2], vol21_28_se_test)
+
+pd.concat([metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_28[0][-500:], vol21_28[1], vol21_28[2], vol21_28_se, vol21_28_se_val, vol21_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol21 = pd.concat([
+    metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test,
+    metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test,
+    metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test,
+    metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test
+])
+```
+
+#### Volatilidad $\omega = 28$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol28_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[0], best_param)
+vol28_7_se = model.smooth()
+
+metrics_vol28_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol28_7[0], vol28_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[1], best_param)
+vol28_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_7[2], best_param)
+vol28_7_se_test = model.smooth()
+
+metrics_vol28_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol28_7[1], vol28_7_se_val)
+metrics_vol28_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol28_7[2], vol28_7_se_test)
+
+pd.concat([metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_7[0][-500:], vol28_7[1], vol28_7[2], vol28_7_se, vol28_7_se_val, vol28_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[0], best_param)
+vol28_14_se = model.smooth()
+
+metrics_vol28_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol28_14[0], vol28_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[1], best_param)
+vol28_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_14[2], best_param)
+vol28_14_se_test = model.smooth()
+
+metrics_vol28_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol28_14[1], vol28_14_se_val)
+metrics_vol28_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol28_14[2], vol28_14_se_test)
+
+pd.concat([metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_14[0][-500:], vol28_14[1], vol28_14[2], vol28_14_se, vol28_14_se_val, vol28_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[0], best_param)
+vol28_21_se = model.smooth()
+
+metrics_vol28_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol28_21[0], vol28_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[1], best_param)
+vol28_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_21[2], best_param)
+vol28_21_se_test = model.smooth()
+
+metrics_vol28_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol28_21[1], vol28_21_se_val)
+metrics_vol28_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol28_21[2], vol28_21_se_test)
+
+pd.concat([metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_21[0][-500:], vol28_21[1], vol28_21[2], vol28_21_se, vol28_21_se_val, vol28_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[0], best_param)
+vol28_28_se = model.smooth()
+
+metrics_vol28_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol28_28[0], vol28_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[1], best_param)
+vol28_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_28[2], best_param)
+vol28_28_se_test = model.smooth()
+
+metrics_vol28_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol28_28[1], vol28_28_se_val)
+metrics_vol28_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol28_28[2], vol28_28_se_test)
+
+pd.concat([metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_28[0][-500:], vol28_28[1], vol28_28[2], vol28_28_se, vol28_28_se_val, vol28_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol28 = pd.concat([
+    metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test,
+    metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test,
+    metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test,
+    metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test
+])
+```
+
+### Caso doble sin librería
+
+#### Price
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(price7_se, param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price7_se, best_param)
+price7_se2 = model.smooth()
+
+metrics_price7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', price7_se, price7_se2, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price7_se_val, best_param)
+price7_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price7_se_test, best_param)
+price7_se_test2 = model.smooth()
+
+metrics_price7_val_ = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', price7_se_val, price7_se_val2)
+metrics_price7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', price7_se_test, price7_se_test2)
+
+pd.concat([metrics_price7, metrics_price7_val, metrics_price7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price7_se[-500:], price7_se_val, price7_se_test, price7_se2, price7_se_val2, price7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price14_se, best_param)
+price14_se2 = model.smooth()
+
+metrics_price14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', price14_se, price14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price14_se_val, best_param)
+price14_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price14_se_test, best_param)
+price14_se_test2 = model.smooth()
+
+metrics_price14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', price14_se_val, price14_se_val2)
+metrics_price14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', price14_se_test, price14_se_test2)
+
+pd.concat([metrics_price14, metrics_price14_val, metrics_price14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price14_se[-500:], price14_se_val, price14_se_test, price14_se2, price14_se_val2, price14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price21_se, best_param)
+price21_se2 = model.smooth()
+metrics_price21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', price21_se, price21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price21_se_val, best_param)
+price21_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price21_se_test, best_param)
+price21_se_test2 = model.smooth()
+
+metrics_price21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', price21_se_val, price21_se_val2)
+metrics_price21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', price21_se_test, price21_se_test2)
+
+pd.concat([metrics_price21, metrics_price21_val, metrics_price21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price21_se[-500:], price21_se_val, price21_se_test, price21_se2, price21_se_val2, price21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price28_se, best_param)
+price28_se2 = model.smooth()
+metrics_price28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', price28_se, price28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price28_se_val, best_param)
+price28_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price28_se_test, best_param)
+price28_se_test2 = model.smooth()
+
+metrics_price28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', price28_se_val, price28_se_val2)
+metrics_price28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', price28_se_test, price28_se_test2)
+
+pd.concat([metrics_price28, metrics_price28_val, metrics_price28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price28_se[-500:], price28_se_val, price28_se_test, price28_se2, price28_se_val2, price28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_price_d = pd.concat([
+    metrics_price7, metrics_price7_val, metrics_price7_test,
+    metrics_price14, metrics_price14_val, metrics_price14_test,
+    metrics_price21, metrics_price21_val, metrics_price21_test,
+    metrics_price28, metrics_price28_val, metrics_price28_test
+])
+```
+
+#### Retorno acumulado
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(A_t7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t7_se, best_param)
+A_t7_se2 = model.smooth()
+
+metrics_A_t7 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'train τ = 7', A_t7_se, A_t7_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t7_se_val, best_param)
+A_t7_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(A_t7_se_test, best_param)
+A_t7_se_test2 = model.smooth()
+
+metrics_A_t7_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'val τ = 7', A_t7_se_val, A_t7_se_val2)
+metrics_A_t7_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'test τ = 7', A_t7_se_test, A_t7_se_test2)
+
+pd.concat([metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t7_se[-500:], A_t7_se_val, A_t7_se_test, A_t7_se2, A_t7_se_val2, A_t7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t14_se, best_param)
+A_t14_se2 = model.smooth()
+
+metrics_A_t14 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'train τ = 14', A_t14_se, A_t14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t14_se_val, best_param)
+A_t14_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(A_t14_se_test, best_param)
+A_t14_se_test2 = model.smooth()
+
+metrics_A_t14_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'val τ = 14', A_t14_se_val, A_t14_se_val2)
+metrics_A_t14_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'test τ = 14', A_t14_se_test, A_t14_se_test2)
+
+pd.concat([metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t14_se[-500:], A_t14_se_val, A_t14_se_test, A_t14_se2, A_t14_se_val2, A_t14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t21_se, best_param)
+A_t21_se2 = model.smooth()
+
+metrics_A_t21 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'train τ = 21', A_t21_se, A_t21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t21_se_val, best_param)
+A_t21_se_val2 = model.smooth()
+model = ExponentialSmoothing(A_t21_se_test, best_param)
+A_t21_se_test2 = model.smooth()
+metrics_A_t21_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'val τ = 21', A_t21_se_val, A_t21_se_val2)
+metrics_A_t21_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'test τ = 21', A_t21_se_test, A_t21_se_test2)
+
+pd.concat([metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t21_se[-500:], A_t21_se_val, A_t21_se_test, A_t21_se2, A_t21_se_val2, A_t21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t28_se, best_param)
+A_t28_se2 = model.smooth()
+metrics_A_t28 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'train τ = 28', A_t28_se, A_t28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t28_se_val, best_param)
+A_t28_se_val2 = model.smooth()
+model = ExponentialSmoothing(A_t28_se_test, best_param)
+A_t28_se_test2 = model.smooth()
+metrics_A_t28_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'val τ = 28', A_t28_se_val, A_t28_se_val2)
+metrics_A_t28_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'test τ = 28', A_t28_se_test, A_t28_se_test2)
+
+pd.concat([metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t28_se[-500:], A_t28_se_val, A_t28_se_test, A_t28_se2, A_t28_se_val2, A_t28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_A_t_d = pd.concat([
+    metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test,
+    metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test,
+    metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test,
+    metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test
+])
+```
+
+#### Volatilidad $\omega = 7$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol7_7_se, param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_7_se, best_param)
+vol7_7_se2 = model.smooth()
+metrics_vol7_7 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'train τ = 7', vol7_7_se, vol7_7_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_7_se_val, best_param)
+vol7_7_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_7_se_test, best_param)
+vol7_7_se_test2 = model.smooth()
+metrics_vol7_7_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'val τ = 7', vol7_7_se_val, vol7_7_se_val2)
+metrics_vol7_7_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'test τ = 7', vol7_7_se_test, vol7_7_se_test2)
+
+pd.concat([metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_7_se[-500:], vol7_7_se_val, vol7_7_se_test, vol7_7_se2, vol7_7_se_val2, vol7_7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_14_se, best_param)
+vol7_14_se2 = model.smooth()
+metrics_vol7_14 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'train τ = 14', vol7_14_se, vol7_14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_14_se_val, best_param)
+vol7_14_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_14_se_test, best_param)
+vol7_14_se_test2 = model.smooth()
+metrics_vol7_14_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'val τ = 14', vol7_14_se_val, vol7_14_se_val2)
+metrics_vol7_14_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'test τ = 14', vol7_14_se_test, vol7_14_se_test2)
+
+pd.concat([metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_14_se[-500:], vol7_14_se_val, vol7_14_se_test, vol7_14_se2, vol7_14_se_val2, vol7_14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_21_se, best_param)
+vol7_21_se2 = model.smooth()
+metrics_vol7_21 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'train τ = 21', vol7_21_se, vol7_21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_21_se_val, best_param)
+vol7_21_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_21_se_test, best_param)
+vol7_21_se_test2 = model.smooth()
+metrics_vol7_21_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'val τ = 21', vol7_21_se_val, vol7_21_se_val2)
+metrics_vol7_21_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'test τ = 21', vol7_21_se_test, vol7_21_se_test2)
+
+pd.concat([metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_21_se[-500:], vol7_21_se_val, vol7_21_se_test, vol7_21_se2, vol7_21_se_val2, vol7_21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_28_se, best_param)
+vol7_28_se2 = model.smooth()
+metrics_vol7_28 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'train τ = 28', vol7_28_se, vol7_28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_28_se_val, best_param)
+vol7_28_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_28_se_test, best_param)
+vol7_28_se_test2 = model.smooth()
+metrics_vol7_28_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'val τ = 28', vol7_28_se_val, vol7_28_se_val2)
+metrics_vol7_28_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'test τ = 28', vol7_28_se_test, vol7_28_se_test2)
+
+pd.concat([metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_28_se[-500:], vol7_28_se_val, vol7_28_se_test, vol7_28_se2, vol7_28_se_val2, vol7_28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol7_d = pd.concat([
+    metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test,
+    metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test,
+    metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test,
+    metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test
+])
+```
+
+#### Volatilidad $\omega = 14$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol14_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[0], best_param)
+vol14_7_se = model.smooth()
+
+metrics_vol14_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol14_7[0], vol14_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[1], best_param)
+vol14_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_7[2], best_param)
+vol14_7_se_test = model.smooth()
+
+metrics_vol14_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol14_7[1], vol14_7_se_val)
+metrics_vol14_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol14_7[2], vol14_7_se_test)
+
+pd.concat([metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_7[0][-500:], vol14_7[1], vol14_7[2], vol14_7_se, vol14_7_se_val, vol14_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[0], best_param)
+vol14_14_se = model.smooth()
+
+metrics_vol14_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol14_14[0], vol14_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[1], best_param)
+vol14_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_14[2], best_param)
+vol14_14_se_test = model.smooth()
+
+metrics_vol14_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol14_14[1], vol14_14_se_val)
+metrics_vol14_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol14_14[2], vol14_14_se_test)
+
+pd.concat([metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_14[0][-500:], vol14_14[1], vol14_14[2], vol14_14_se, vol14_14_se_val, vol14_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[0], best_param)
+vol14_21_se = model.smooth()
+
+metrics_vol14_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol14_21[0], vol14_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[1], best_param)
+vol14_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_21[2], best_param)
+vol14_21_se_test = model.smooth()
+
+metrics_vol14_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol14_21[1], vol14_21_se_val)
+metrics_vol14_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol14_21[2], vol14_21_se_test)
+
+pd.concat([metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_21[0][-500:], vol14_21[1], vol14_21[2], vol14_21_se, vol14_21_se_val, vol14_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[0], best_param)
+vol14_28_se = model.smooth()
+
+metrics_vol14_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol14_28[0], vol14_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[1], best_param)
+vol14_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_28[2], best_param)
+vol14_28_se_test = model.smooth()
+
+metrics_vol14_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol14_28[1], vol14_28_se_val)
+metrics_vol14_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol14_28[2], vol14_28_se_test)
+
+pd.concat([metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_28[0][-500:], vol14_28[1], vol14_28[2], vol14_28_se, vol14_28_se_val, vol14_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol14_d = pd.concat([
+    metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test,
+    metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test,
+    metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test,
+    metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test
+])
+```
+
+#### Volatilidad $\omega = 21$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol21_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[0], best_param)
+vol21_7_se = model.smooth()
+
+metrics_vol21_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol21_7[0], vol21_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[1], best_param)
+vol21_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_7[2], best_param)
+vol21_7_se_test = model.smooth()
+
+metrics_vol21_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol21_7[1], vol21_7_se_val)
+metrics_vol21_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol21_7[2], vol21_7_se_test)
+
+pd.concat([metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_7[0][-500:], vol21_7[1], vol21_7[2], vol21_7_se, vol21_7_se_val, vol21_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[0], best_param)
+vol21_14_se = model.smooth()
+
+metrics_vol21_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol21_14[0], vol21_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[1], best_param)
+vol21_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_14[2], best_param)
+vol21_14_se_test = model.smooth()
+
+metrics_vol21_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol21_14[1], vol21_14_se_val)
+metrics_vol21_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol21_14[2], vol21_14_se_test)
+
+pd.concat([metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_14[0][-500:], vol21_14[1], vol21_14[2], vol21_14_se, vol21_14_se_val, vol21_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[0], best_param)
+vol21_21_se = model.smooth()
+
+metrics_vol21_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol21_21[0], vol21_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[1], best_param)
+vol21_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_21[2], best_param)
+vol21_21_se_test = model.smooth()
+
+metrics_vol21_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol21_21[1], vol21_21_se_val)
+metrics_vol21_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol21_21[2], vol21_21_se_test)
+
+pd.concat([metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_21[0][-500:], vol21_21[1], vol21_21[2], vol21_21_se, vol21_21_se_val, vol21_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[0], best_param)
+vol21_28_se = model.smooth()
+
+metrics_vol21_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol21_28[0], vol21_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[1], best_param)
+vol21_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_28[2], best_param)
+vol21_28_se_test = model.smooth()
+
+metrics_vol21_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol21_28[1], vol21_28_se_val)
+metrics_vol21_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol21_28[2], vol21_28_se_test)
+
+pd.concat([metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_28[0][-500:], vol21_28[1], vol21_28[2], vol21_28_se, vol21_28_se_val, vol21_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol21_d = pd.concat([
+    metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test,
+    metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test,
+    metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test,
+    metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test
+])
+```
+
+#### Volatilidad $\omega = 28$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol28_7[0], param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[0], best_param)
+vol28_7_se = model.smooth()
+
+metrics_vol28_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol28_7[0], vol28_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[1], best_param)
+vol28_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_7[2], best_param)
+vol28_7_se_test = model.smooth()
+
+metrics_vol28_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol28_7[1], vol28_7_se_val)
+metrics_vol28_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol28_7[2], vol28_7_se_test)
+
+pd.concat([metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_7[0][-500:], vol28_7[1], vol28_7[2], vol28_7_se, vol28_7_se_val, vol28_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[0], best_param)
+vol28_14_se = model.smooth()
+
+metrics_vol28_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol28_14[0], vol28_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[1], best_param)
+vol28_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_14[2], best_param)
+vol28_14_se_test = model.smooth()
+
+metrics_vol28_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol28_14[1], vol28_14_se_val)
+metrics_vol28_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol28_14[2], vol28_14_se_test)
+
+pd.concat([metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_14[0][-500:], vol28_14[1], vol28_14[2], vol28_14_se, vol28_14_se_val, vol28_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[0], best_param)
+vol28_21_se = model.smooth()
+
+metrics_vol28_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol28_21[0], vol28_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[1], best_param)
+vol28_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_21[2], best_param)
+vol28_21_se_test = model.smooth()
+
+metrics_vol28_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol28_21[1], vol28_21_se_val)
+metrics_vol28_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol28_21[2], vol28_21_se_test)
+
+pd.concat([metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_21[0][-500:], vol28_21[1], vol28_21[2], vol28_21_se, vol28_21_se_val, vol28_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[0], best_param)
+vol28_28_se = model.smooth()
+
+metrics_vol28_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol28_28[0], vol28_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[1], best_param)
+vol28_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_28[2], best_param)
+vol28_28_se_test = model.smooth()
+
+metrics_vol28_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol28_28[1], vol28_28_se_val)
+metrics_vol28_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol28_28[2], vol28_28_se_test)
+
+pd.concat([metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_28[0][-500:], vol28_28[1], vol28_28[2], vol28_28_se, vol28_28_se_val, vol28_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol28_d = pd.concat([
+    metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test,
+    metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test,
+    metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test,
+    metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test
+])
+```
+
+### Caso simple usando `statsmodels`
+
+A continuación, usaremos la librería `statsmodels` para computar nuestra suavización exponencial mediante la función de HolterWinters.
+
+``` {python}
+class ExponentialSmoothing:
+    def __init__(self, data: pd.Series, trend: Optional[str] = None, seasonal: Optional[str] = None, seasonal_periods: Optional[int] = None, smoothing_level: Optional[float] = None):
+        self.data = data
+        self.trend = trend
+        self.seasonal = seasonal
+        self.seasonal_periods = seasonal_periods
+        self.smoothing_level = smoothing_level
+
+    def smooth(self) -> pd.Series:
+        model = ExponentialSmoothingLib(self.data, trend=self.trend, seasonal=self.seasonal, seasonal_periods=self.seasonal_periods)
+        self.fitted_model = model.fit(smoothing_level=self.smoothing_level)
+        return self.fitted_model.fittedvalues
+
+    def evaluate(self, smoothed_data: Optional[pd.Series] = None) -> pd.DataFrame:
+        if smoothed_data is None:
+            smoothed_data = self.smooth()
+
+        T = len(self.data)
+        actual_values = self.data.values
+        predicted_values = pd.concat([pd.Series([self.data.iloc[0]]), smoothed_data.iloc[:-1]], ignore_index=True).values
+        error = actual_values - predicted_values
+        mean_actual = np.mean(actual_values)
+
+        SSE = sum(error**2)
+        MAPE = 100 * sum(abs(error / actual_values)) / T
+        MAE = np.mean(np.abs(error))
+        MSE = SSE / T
+        RMSE = np.sqrt(MSE)
+        R2 = 1 - (SSE / (np.sum((actual_values - mean_actual) ** 2)))
+
+        return pd.DataFrame({
+            'MAPE': [MAPE],
+            'MAE': [MAE],
+            'RMSE': [RMSE],
+            'MSE': [MSE],
+            'R2': [R2]
+        })
+
+    def optimize_param(self) -> float:
+        smoothed_data = self.smooth()
+        return self.evaluate(smoothed_data)['MAE'].values[0]
+
+    def calculate_metrics(self, y: pd.Series, y_pred: pd.Series, metric_name: str, case: str) -> pd.DataFrame:
+        residuals = y - y_pred
+        metrics_df = self.evaluate(y_pred)
+        metrics_df.index = metrics_df.index.map({0: f'{metric_name} {case}'})
+
+        max_lag = min(10, len(residuals) - 1)
+        if max_lag > 0:
+            ljung_box_pval = acorr_ljungbox(residuals, lags=[max_lag], return_df=True)['lb_pvalue'].iloc[0]
+        else:
+            ljung_box_pval = np.nan
+
+        jb_pvalue = jarque_bera(residuals)[1]
+
+        metrics_df['Ljung-Box p-value'] = ljung_box_pval
+        metrics_df['Jarque-Bera p-value'] = jb_pvalue
+        return metrics_df, residuals
+
+    def plot_residuals(self, residuals: pd.Series, model_name: str):
+        fig, ax = plt.subplots(figsize=(8.6, 5))
+        ax.plot(residuals.index, residuals.values, color='#1f77b4', linestyle='-', marker='o', markersize=2)
+        ax.set_title(f'{model_name}', fontsize=14)
+        ax.set_xlabel('Índice', fontsize=12)
+        ax.set_ylabel('Residuo', fontsize=12)
+        ax.grid(True, linestyle='--', alpha=0.7)
+        plt.show()
+
+    def plot_diagnostics(self, residuals: pd.Series, model_name: str):
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(7.6, 6))
+        sm.qqplot(residuals, line='s', ax=axes[0])
+        axes[0].set_title('QQ Plot de los Residuos')
+        sm.graphics.tsa.plot_pacf(residuals, lags=30, ax=axes[1])
+        axes[1].set_title('Autocorrelación Parcial de los Residuos')
+        plt.suptitle(f'{model_name}', fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.show()
+
+    def residuals(self, model_name: str, metric_name: str, case: str, y: pd.Series, y_pred: pd.Series, show_info: bool = False) -> pd.DataFrame:
+        metrics_df, residuals = self.calculate_metrics(y, y_pred, metric_name, case)
+
+        if show_info:
+            self.plot_residuals(residuals, model_name)
+            self.plot_diagnostics(residuals, model_name)
+
+            ljung_box_pval = metrics_df['Ljung-Box p-value'].iloc[0]
+            jb_pvalue = metrics_df['Jarque-Bera p-value'].iloc[0]
+
+            if ljung_box_pval > 0.05:
+                print('No se rechaza H0: los residuales son independientes (no correlacionados).')
+            else:
+                print('Se rechaza H0: hay autocorrelación en los residuales.')
+
+            print(f'Jarque-Bera p-value: {jb_pvalue}')
+            if jb_pvalue > 0.05:
+                print('No se rechaza H0: los residuales siguen una distribución normal.')
+            else:
+                print('Se rechaza H0: los residuales no siguen una distribución normal.')
+
+        return metrics_df
+
+    def plot_preds(self, y_train: pd.Series, y_val: pd.Series, y_test: pd.Series,
+                            y_pred_train: pd.Series, y_pred_val: pd.Series, y_pred_test: pd.Series):
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(x=y_train[-250:].index, y=y_train[-250:], mode='lines', name='y_train', line=dict(color='#FDDBBB', dash = 'dash')))
+        fig.add_trace(go.Scatter(x=y_val.index, y=y_val, mode='lines', name='y_val', line=dict(color='#BFECFF', dash = 'dash')))
+        fig.add_trace(go.Scatter(x=y_test.index, y=y_test, mode='lines', name='y_test', line=dict(color='#C9E9D2', dash = 'dash')))
+
+        fig.add_trace(go.Scatter(x=y_pred_train[-250:].index, y=y_pred_train[-250:], mode='lines', name='y_pred_train',
+                                 line=dict(color='#CB9DF0', dash='dash')))
+        fig.add_trace(go.Scatter(x=y_pred_val.index, y=y_pred_val, mode='lines', name='y_pred_val',
+                                 line=dict(color='#FFCCEA', dash='dash')))
+        fig.add_trace(go.Scatter(x=y_pred_test.index, y=y_pred_test, mode='lines', name='y_pred_test',
+                                 line=dict(color='#EEEEEE', dash='dash')))
+
+        fig.update_layout(
+            title="Comparación de y v.s. y_pred",
+            xaxis_title="",
+            yaxis_title="",
+            legend_title="Series",
+            margin={'b': 0, 'r': 30, 'l': 30, 't': 80},
+            plot_bgcolor='rgba(0, 0, 0, 0.0)',
+            paper_bgcolor='rgba(0, 0, 0, 0.0)',
+            font_color="white",
+            hoverlabel=dict(
+                bgcolor="#222"
+            ),
+            xaxis=dict(gridcolor='#222', tickfont=dict(color='white')),
+            yaxis=dict(gridcolor='#222', tickfont=dict(color='white')),
+        )
+
+        return fig
+```
+
+#### Price
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(price7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price7[0], smoothing_level = best_param)
+price7_se = model.smooth()
+
+metrics_price7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', price7[0], price7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price7[1], smoothing_level = best_param)
+price7_se_val = model.smooth()
+
+model = ExponentialSmoothing(price7[2], smoothing_level = best_param)
+price7_se_test = model.smooth()
+
+metrics_price7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', price7[1], price7_se_val)
+metrics_price7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', price7[2], price7_se_test)
+
+pd.concat([metrics_price7, metrics_price7_val, metrics_price7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price7[0][-500:], price7[1], price7[2], price7_se, price7_se_val, price7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price14[0], smoothing_level = best_param)
+price14_se = model.smooth()
+
+metrics_price14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', price14[0], price14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price14[1], smoothing_level = best_param)
+price14_se_val = model.smooth()
+
+model = ExponentialSmoothing(price14[2], smoothing_level = best_param)
+price14_se_test = model.smooth()
+
+metrics_price14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', price14[1], price14_se_val)
+metrics_price14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', price14[2], price14_se_test)
+
+pd.concat([metrics_price14, metrics_price14_val, metrics_price14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price14[0][-500:], price14[1], price14[2], price14_se, price14_se_val, price14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price21[0], smoothing_level = best_param)
+price21_se = model.smooth()
+
+metrics_price21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', price21[0], price21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price21[1], smoothing_level = best_param)
+price21_se_val = model.smooth()
+
+model = ExponentialSmoothing(price21[2], smoothing_level = best_param)
+price21_se_test = model.smooth()
+
+metrics_price21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', price21[1], price21_se_val)
+metrics_price21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', price21[2], price21_se_test)
+
+pd.concat([metrics_price21, metrics_price21_val, metrics_price21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price21[0][-500:], price21[1], price21[2], price21_se, price21_se_val, price21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price28[0], smoothing_level = best_param)
+price28_se = model.smooth()
+
+metrics_price28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', price28[0], price28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price28[1], smoothing_level = best_param)
+price28_se_val = model.smooth()
+
+model = ExponentialSmoothing(price28[2], smoothing_level = best_param)
+price28_se_test = model.smooth()
+
+metrics_price28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', price28[1], price28_se_val)
+metrics_price28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', price28[2], price28_se_test)
+
+pd.concat([metrics_price28, metrics_price28_val, metrics_price28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price28[0][-500:], price28[1], price28[2], price28_se, price28_se_val, price28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_price = pd.concat([
+    metrics_price7, metrics_price7_val, metrics_price7_test,
+    metrics_price14, metrics_price14_val, metrics_price14_test,
+    metrics_price21, metrics_price21_val, metrics_price21_test,
+    metrics_price28, metrics_price28_val, metrics_price28_test
+])
+```
+
+#### Retorno acumulado
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(A_t7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t7[0], smoothing_level = best_param)
+A_t7_se = model.smooth()
+
+metrics_A_t7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', A_t7[0], A_t7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t7[1], smoothing_level = best_param)
+A_t7_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t7[2], smoothing_level = best_param)
+A_t7_se_test = model.smooth()
+
+metrics_A_t7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', A_t7[1], A_t7_se_val)
+metrics_A_t7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', A_t7[2], A_t7_se_test)
+
+pd.concat([metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t7[0][-500:], A_t7[1], A_t7[2], A_t7_se, A_t7_se_val, A_t7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t14[0], smoothing_level = best_param)
+A_t14_se = model.smooth()
+
+metrics_A_t14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', A_t14[0], A_t14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t14[1], smoothing_level = best_param)
+A_t14_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t14[2], smoothing_level = best_param)
+A_t14_se_test = model.smooth()
+
+metrics_A_t14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', A_t14[1], A_t14_se_val)
+metrics_A_t14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', A_t14[2], A_t14_se_test)
+
+pd.concat([metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t14[0][-500:], A_t14[1], A_t14[2], A_t14_se, A_t14_se_val, A_t14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t21[0], smoothing_level = best_param)
+A_t21_se = model.smooth()
+
+metrics_A_t21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', A_t21[0], A_t21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t21[1], smoothing_level = best_param)
+A_t21_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t21[2], smoothing_level = best_param)
+A_t21_se_test = model.smooth()
+
+metrics_A_t21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', A_t21[1], A_t21_se_val)
+metrics_A_t21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', A_t21[2], A_t21_se_test)
+
+pd.concat([metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t21[0][-500:], A_t21[1], A_t21[2], A_t21_se, A_t21_se_val, A_t21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t28[0], smoothing_level = best_param)
+A_t28_se = model.smooth()
+
+metrics_A_t28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', A_t28[0], A_t28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t28[1], smoothing_level = best_param)
+A_t28_se_val = model.smooth()
+
+model = ExponentialSmoothing(A_t28[2], smoothing_level = best_param)
+A_t28_se_test = model.smooth()
+
+metrics_A_t28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', A_t28[1], A_t28_se_val)
+metrics_A_t28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', A_t28[2], A_t28_se_test)
+
+pd.concat([metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t28[0][-500:], A_t28[1], A_t28[2], A_t28_se, A_t28_se_val, A_t28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_A_t = pd.concat([
+    metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test,
+    metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test,
+    metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test,
+    metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test
+])
+```
+
+#### Volatilidad $\omega = 7$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol7_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_7[0], smoothing_level = best_param)
+vol7_7_se = model.smooth()
+
+metrics_vol7_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol7_7[0], vol7_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_7[1], smoothing_level = best_param)
+vol7_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_7[2], smoothing_level = best_param)
+vol7_7_se_test = model.smooth()
+
+metrics_vol7_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol7_7[1], vol7_7_se_val)
+metrics_vol7_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol7_7[2], vol7_7_se_test)
+
+pd.concat([metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_7[0][-500:], vol7_7[1], vol7_7[2], vol7_7_se, vol7_7_se_val, vol7_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_14[0], smoothing_level = best_param)
+vol7_14_se = model.smooth()
+
+metrics_vol7_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol7_14[0], vol7_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_14[1], smoothing_level = best_param)
+vol7_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_14[2], smoothing_level = best_param)
+vol7_14_se_test = model.smooth()
+
+metrics_vol7_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol7_14[1], vol7_14_se_val)
+metrics_vol7_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol7_14[2], vol7_14_se_test)
+
+pd.concat([metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_14[0][-500:], vol7_14[1], vol7_14[2], vol7_14_se, vol7_14_se_val, vol7_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_21[0], smoothing_level = best_param)
+vol7_21_se = model.smooth()
+
+metrics_vol7_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol7_21[0], vol7_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_21[1], smoothing_level = best_param)
+vol7_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_21[2], smoothing_level = best_param)
+vol7_21_se_test = model.smooth()
+
+metrics_vol7_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol7_21[1], vol7_21_se_val)
+metrics_vol7_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol7_21[2], vol7_21_se_test)
+
+pd.concat([metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_21[0][-500:], vol7_21[1], vol7_21[2], vol7_21_se, vol7_21_se_val, vol7_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_28[0], smoothing_level = best_param)
+vol7_28_se = model.smooth()
+
+metrics_vol7_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol7_28[0], vol7_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_28[1], smoothing_level = best_param)
+vol7_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol7_28[2], smoothing_level = best_param)
+vol7_28_se_test = model.smooth()
+
+metrics_vol7_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol7_28[1], vol7_28_se_val)
+metrics_vol7_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol7_28[2], vol7_28_se_test)
+
+pd.concat([metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_28[0][-500:], vol7_28[1], vol7_28[2], vol7_28_se, vol7_28_se_val, vol7_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol7 = pd.concat([
+    metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test,
+    metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test,
+    metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test,
+    metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test
+])
+```
+
+#### Volatilidad $\omega = 14$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol14_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[0], smoothing_level = best_param)
+vol14_7_se = model.smooth()
+
+metrics_vol14_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol14_7[0], vol14_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[1], smoothing_level = best_param)
+vol14_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_7[2], smoothing_level = best_param)
+vol14_7_se_test = model.smooth()
+
+metrics_vol14_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol14_7[1], vol14_7_se_val)
+metrics_vol14_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol14_7[2], vol14_7_se_test)
+
+pd.concat([metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_7[0][-500:], vol14_7[1], vol14_7[2], vol14_7_se, vol14_7_se_val, vol14_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[0], smoothing_level = best_param)
+vol14_14_se = model.smooth()
+
+metrics_vol14_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol14_14[0], vol14_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[1], smoothing_level = best_param)
+vol14_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_14[2], smoothing_level = best_param)
+vol14_14_se_test = model.smooth()
+
+metrics_vol14_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol14_14[1], vol14_14_se_val)
+metrics_vol14_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol14_14[2], vol14_14_se_test)
+
+pd.concat([metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_14[0][-500:], vol14_14[1], vol14_14[2], vol14_14_se, vol14_14_se_val, vol14_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[0], smoothing_level = best_param)
+vol14_21_se = model.smooth()
+
+metrics_vol14_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol14_21[0], vol14_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[1], smoothing_level = best_param)
+vol14_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_21[2], smoothing_level = best_param)
+vol14_21_se_test = model.smooth()
+
+metrics_vol14_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol14_21[1], vol14_21_se_val)
+metrics_vol14_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol14_21[2], vol14_21_se_test)
+
+pd.concat([metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_21[0][-500:], vol14_21[1], vol14_21[2], vol14_21_se, vol14_21_se_val, vol14_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[0], smoothing_level = best_param)
+vol14_28_se = model.smooth()
+
+metrics_vol14_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol14_28[0], vol14_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[1], smoothing_level = best_param)
+vol14_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_28[2], smoothing_level = best_param)
+vol14_28_se_test = model.smooth()
+
+metrics_vol14_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol14_28[1], vol14_28_se_val)
+metrics_vol14_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol14_28[2], vol14_28_se_test)
+
+pd.concat([metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_28[0][-500:], vol14_28[1], vol14_28[2], vol14_28_se, vol14_28_se_val, vol14_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol14 = pd.concat([
+    metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test,
+    metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test,
+    metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test,
+    metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test
+])
+```
+
+#### Volatilidad $\omega = 21$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol21_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[0], smoothing_level = best_param)
+vol21_7_se = model.smooth()
+
+metrics_vol21_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol21_7[0], vol21_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[1], smoothing_level = best_param)
+vol21_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_7[2], smoothing_level = best_param)
+vol21_7_se_test = model.smooth()
+
+metrics_vol21_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol21_7[1], vol21_7_se_val)
+metrics_vol21_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol21_7[2], vol21_7_se_test)
+
+pd.concat([metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_7[0][-500:], vol21_7[1], vol21_7[2], vol21_7_se, vol21_7_se_val, vol21_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[0], smoothing_level = best_param)
+vol21_14_se = model.smooth()
+
+metrics_vol21_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol21_14[0], vol21_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[1], smoothing_level = best_param)
+vol21_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_14[2], smoothing_level = best_param)
+vol21_14_se_test = model.smooth()
+
+metrics_vol21_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol21_14[1], vol21_14_se_val)
+metrics_vol21_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol21_14[2], vol21_14_se_test)
+
+pd.concat([metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_14[0][-500:], vol21_14[1], vol21_14[2], vol21_14_se, vol21_14_se_val, vol21_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[0], smoothing_level = best_param)
+vol21_21_se = model.smooth()
+
+metrics_vol21_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol21_21[0], vol21_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[1], smoothing_level = best_param)
+vol21_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_21[2], smoothing_level = best_param)
+vol21_21_se_test = model.smooth()
+
+metrics_vol21_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol21_21[1], vol21_21_se_val)
+metrics_vol21_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol21_21[2], vol21_21_se_test)
+
+pd.concat([metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_21[0][-500:], vol21_21[1], vol21_21[2], vol21_21_se, vol21_21_se_val, vol21_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[0], smoothing_level = best_param)
+vol21_28_se = model.smooth()
+
+metrics_vol21_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol21_28[0], vol21_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[1], smoothing_level = best_param)
+vol21_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_28[2], smoothing_level = best_param)
+vol21_28_se_test = model.smooth()
+
+metrics_vol21_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol21_28[1], vol21_28_se_val)
+metrics_vol21_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol21_28[2], vol21_28_se_test)
+
+pd.concat([metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_28[0][-500:], vol21_28[1], vol21_28[2], vol21_28_se, vol21_28_se_val, vol21_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol21 = pd.concat([
+    metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test,
+    metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test,
+    metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test,
+    metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test
+])
+```
+
+#### Volatilidad $\omega = 28$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol28_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[0], smoothing_level = best_param)
+vol28_7_se = model.smooth()
+
+metrics_vol28_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol28_7[0], vol28_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[1], smoothing_level = best_param)
+vol28_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_7[2], smoothing_level = best_param)
+vol28_7_se_test = model.smooth()
+
+metrics_vol28_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol28_7[1], vol28_7_se_val)
+metrics_vol28_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol28_7[2], vol28_7_se_test)
+
+pd.concat([metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_7[0][-500:], vol28_7[1], vol28_7[2], vol28_7_se, vol28_7_se_val, vol28_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[0], smoothing_level = best_param)
+vol28_14_se = model.smooth()
+
+metrics_vol28_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol28_14[0], vol28_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[1], smoothing_level = best_param)
+vol28_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_14[2], smoothing_level = best_param)
+vol28_14_se_test = model.smooth()
+
+metrics_vol28_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol28_14[1], vol28_14_se_val)
+metrics_vol28_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol28_14[2], vol28_14_se_test)
+
+pd.concat([metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_14[0][-500:], vol28_14[1], vol28_14[2], vol28_14_se, vol28_14_se_val, vol28_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[0], smoothing_level = best_param)
+vol28_21_se = model.smooth()
+
+metrics_vol28_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol28_21[0], vol28_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[1], smoothing_level = best_param)
+vol28_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_21[2], smoothing_level = best_param)
+vol28_21_se_test = model.smooth()
+
+metrics_vol28_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol28_21[1], vol28_21_se_val)
+metrics_vol28_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol28_21[2], vol28_21_se_test)
+
+pd.concat([metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_21[0][-500:], vol28_21[1], vol28_21[2], vol28_21_se, vol28_21_se_val, vol28_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[0], smoothing_level = best_param)
+vol28_28_se = model.smooth()
+
+metrics_vol28_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol28_28[0], vol28_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[1], smoothing_level = best_param)
+vol28_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_28[2], smoothing_level = best_param)
+vol28_28_se_test = model.smooth()
+
+metrics_vol28_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol28_28[1], vol28_28_se_val)
+metrics_vol28_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol28_28[2], vol28_28_se_test)
+
+pd.concat([metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_28[0][-500:], vol28_28[1], vol28_28[2], vol28_28_se, vol28_28_se_val, vol28_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol28 = pd.concat([
+    metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test,
+    metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test,
+    metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test,
+    metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test
+])
+```
+
+### Caso doble usando `statsmodels`
+
+#### Price
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(price7_se, smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price7_se, smoothing_level = best_param)
+price7_se2 = model.smooth()
+
+metrics_price7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', price7_se, price7_se2, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price7_se_val, smoothing_level = best_param)
+price7_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price7_se_test, smoothing_level = best_param)
+price7_se_test2 = model.smooth()
+
+metrics_price7_val_ = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', price7_se_val, price7_se_val2)
+metrics_price7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', price7_se_test, price7_se_test2)
+
+pd.concat([metrics_price7, metrics_price7_val, metrics_price7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price7_se[-500:], price7_se_val, price7_se_test, price7_se2, price7_se_val2, price7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price14_se, smoothing_level = best_param)
+price14_se2 = model.smooth()
+
+metrics_price14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', price14_se, price14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price14_se_val, smoothing_level = best_param)
+price14_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price14_se_test, smoothing_level = best_param)
+price14_se_test2 = model.smooth()
+
+metrics_price14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', price14_se_val, price14_se_val2)
+metrics_price14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', price14_se_test, price14_se_test2)
+
+pd.concat([metrics_price14, metrics_price14_val, metrics_price14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price14_se[-500:], price14_se_val, price14_se_test, price14_se2, price14_se_val2, price14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price21_se, smoothing_level = best_param)
+price21_se2 = model.smooth()
+metrics_price21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', price21_se, price21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price21_se_val, smoothing_level = best_param)
+price21_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price21_se_test, smoothing_level = best_param)
+price21_se_test2 = model.smooth()
+
+metrics_price21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', price21_se_val, price21_se_val2)
+metrics_price21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', price21_se_test, price21_se_test2)
+
+pd.concat([metrics_price21, metrics_price21_val, metrics_price21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price21_se[-500:], price21_se_val, price21_se_test, price21_se2, price21_se_val2, price21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(price28_se, smoothing_level = best_param)
+price28_se2 = model.smooth()
+metrics_price28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', price28_se, price28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(price28_se_val, smoothing_level = best_param)
+price28_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(price28_se_test, smoothing_level = best_param)
+price28_se_test2 = model.smooth()
+
+metrics_price28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', price28_se_val, price28_se_val2)
+metrics_price28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', price28_se_test, price28_se_test2)
+
+pd.concat([metrics_price28, metrics_price28_val, metrics_price28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(price28_se[-500:], price28_se_val, price28_se_test, price28_se2, price28_se_val2, price28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_price28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_price28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_price_d = pd.concat([
+    metrics_price7, metrics_price7_val, metrics_price7_test,
+    metrics_price14, metrics_price14_val, metrics_price14_test,
+    metrics_price21, metrics_price21_val, metrics_price21_test,
+    metrics_price28, metrics_price28_val, metrics_price28_test
+])
+```
+
+#### Retorno acumulado
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(A_t7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t7_se, smoothing_level = best_param)
+A_t7_se2 = model.smooth()
+
+metrics_A_t7 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'train τ = 7', A_t7_se, A_t7_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t7_se_val, smoothing_level = best_param)
+A_t7_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(A_t7_se_test, smoothing_level = best_param)
+A_t7_se_test2 = model.smooth()
+
+metrics_A_t7_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'val τ = 7', A_t7_se_val, A_t7_se_val2)
+metrics_A_t7_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 7', 'MAE', 'test τ = 7', A_t7_se_test, A_t7_se_test2)
+
+pd.concat([metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t7_se[-500:], A_t7_se_val, A_t7_se_test, A_t7_se2, A_t7_se_val2, A_t7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t14_se, smoothing_level = best_param)
+A_t14_se2 = model.smooth()
+
+metrics_A_t14 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'train τ = 14', A_t14_se, A_t14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t14_se_val, smoothing_level = best_param)
+A_t14_se_val2 = model.smooth()
+
+model = ExponentialSmoothing(A_t14_se_test, smoothing_level = best_param)
+A_t14_se_test2 = model.smooth()
+
+metrics_A_t14_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'val τ = 14', A_t14_se_val, A_t14_se_val2)
+metrics_A_t14_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 14', 'MAE', 'test τ = 14', A_t14_se_test, A_t14_se_test2)
+
+pd.concat([metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t14_se[-500:], A_t14_se_val, A_t14_se_test, A_t14_se2, A_t14_se_val2, A_t14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t21_se, smoothing_level = best_param)
+A_t21_se2 = model.smooth()
+
+metrics_A_t21 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'train τ = 21', A_t21_se, A_t21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t21_se_val, smoothing_level = best_param)
+A_t21_se_val2 = model.smooth()
+model = ExponentialSmoothing(A_t21_se_test, smoothing_level = best_param)
+A_t21_se_test2 = model.smooth()
+metrics_A_t21_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'val τ = 21', A_t21_se_val, A_t21_se_val2)
+metrics_A_t21_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 21', 'MAE', 'test τ = 21', A_t21_se_test, A_t21_se_test2)
+
+pd.concat([metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t21_se[-500:], A_t21_se_val, A_t21_se_test, A_t21_se2, A_t21_se_val2, A_t21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(A_t28_se, smoothing_level = best_param)
+A_t28_se2 = model.smooth()
+metrics_A_t28 = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'train τ = 28', A_t28_se, A_t28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(A_t28_se_val, smoothing_level = best_param)
+A_t28_se_val2 = model.smooth()
+model = ExponentialSmoothing(A_t28_se_test, smoothing_level = best_param)
+A_t28_se_test2 = model.smooth()
+metrics_A_t28_val = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'val τ = 28', A_t28_se_val, A_t28_se_val2)
+metrics_A_t28_test = model.residuals('Simple Exponential Smoothing - Retorno Acumulado: τ = 28', 'MAE', 'test τ = 28', A_t28_se_test, A_t28_se_test2)
+
+pd.concat([metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(A_t28_se[-500:], A_t28_se_val, A_t28_se_test, A_t28_se2, A_t28_se_val2, A_t28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_A_t28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_A_t28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_A_t_d = pd.concat([
+    metrics_A_t7, metrics_A_t7_val, metrics_A_t7_test,
+    metrics_A_t14, metrics_A_t14_val, metrics_A_t14_test,
+    metrics_A_t21, metrics_A_t21_val, metrics_A_t21_test,
+    metrics_A_t28, metrics_A_t28_val, metrics_A_t28_test
+])
+```
+
+#### Volatilidad $\omega = 7$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol7_7_se, smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_7_se, smoothing_level = best_param)
+vol7_7_se2 = model.smooth()
+metrics_vol7_7 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'train τ = 7', vol7_7_se, vol7_7_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_7_se_val, smoothing_level = best_param)
+vol7_7_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_7_se_test, smoothing_level = best_param)
+vol7_7_se_test2 = model.smooth()
+metrics_vol7_7_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'val τ = 7', vol7_7_se_val, vol7_7_se_val2)
+metrics_vol7_7_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 7', 'MAE', 'test τ = 7', vol7_7_se_test, vol7_7_se_test2)
+
+pd.concat([metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_7_se[-500:], vol7_7_se_val, vol7_7_se_test, vol7_7_se2, vol7_7_se_val2, vol7_7_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_7_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_7_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_14_se, smoothing_level = best_param)
+vol7_14_se2 = model.smooth()
+metrics_vol7_14 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'train τ = 14', vol7_14_se, vol7_14_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_14_se_val, smoothing_level = best_param)
+vol7_14_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_14_se_test, smoothing_level = best_param)
+vol7_14_se_test2 = model.smooth()
+metrics_vol7_14_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'val τ = 14', vol7_14_se_val, vol7_14_se_val2)
+metrics_vol7_14_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 14', 'MAE', 'test τ = 14', vol7_14_se_test, vol7_14_se_test2)
+
+pd.concat([metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_14_se[-500:], vol7_14_se_val, vol7_14_se_test, vol7_14_se2, vol7_14_se_val2, vol7_14_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_14_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_14_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_21_se, smoothing_level = best_param)
+vol7_21_se2 = model.smooth()
+metrics_vol7_21 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'train τ = 21', vol7_21_se, vol7_21_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_21_se_val, smoothing_level = best_param)
+vol7_21_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_21_se_test, smoothing_level = best_param)
+vol7_21_se_test2 = model.smooth()
+metrics_vol7_21_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'val τ = 21', vol7_21_se_val, vol7_21_se_val2)
+metrics_vol7_21_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 21', 'MAE', 'test τ = 21', vol7_21_se_test, vol7_21_se_test2)
+
+pd.concat([metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_21_se[-500:], vol7_21_se_val, vol7_21_se_test, vol7_21_se2, vol7_21_se_val2, vol7_21_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_21_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_21_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol7_28_se, smoothing_level = best_param)
+vol7_28_se2 = model.smooth()
+metrics_vol7_28 = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'train τ = 28', vol7_28_se, vol7_28_se2, show_info=True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol7_28_se_val, smoothing_level = best_param)
+vol7_28_se_val2 = model.smooth()
+model = ExponentialSmoothing(vol7_28_se_test, smoothing_level = best_param)
+vol7_28_se_test2 = model.smooth()
+metrics_vol7_28_val = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'val τ = 28', vol7_28_se_val, vol7_28_se_val2)
+metrics_vol7_28_test = model.residuals('Simple Exponential Smoothing - Volatilidad: τ = 28', 'MAE', 'test τ = 28', vol7_28_se_test, vol7_28_se_test2)
+
+pd.concat([metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol7_28_se[-500:], vol7_28_se_val, vol7_28_se_test, vol7_28_se2, vol7_28_se_val2, vol7_28_se_test2)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol7_28_2.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol7_28_2.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol7_d = pd.concat([
+    metrics_vol7_7, metrics_vol7_7_val, metrics_vol7_7_test,
+    metrics_vol7_14, metrics_vol7_14_val, metrics_vol7_14_test,
+    metrics_vol7_21, metrics_vol7_21_val, metrics_vol7_21_test,
+    metrics_vol7_28, metrics_vol7_28_val, metrics_vol7_28_test
+])
+```
+
+#### Volatilidad $\omega = 14$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol14_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[0], smoothing_level = best_param)
+vol14_7_se = model.smooth()
+
+metrics_vol14_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol14_7[0], vol14_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_7[1], smoothing_level = best_param)
+vol14_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_7[2], smoothing_level = best_param)
+vol14_7_se_test = model.smooth()
+
+metrics_vol14_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol14_7[1], vol14_7_se_val)
+metrics_vol14_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol14_7[2], vol14_7_se_test)
+
+pd.concat([metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_7[0][-500:], vol14_7[1], vol14_7[2], vol14_7_se, vol14_7_se_val, vol14_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[0], smoothing_level = best_param)
+vol14_14_se = model.smooth()
+
+metrics_vol14_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol14_14[0], vol14_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_14[1], smoothing_level = best_param)
+vol14_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_14[2], smoothing_level = best_param)
+vol14_14_se_test = model.smooth()
+
+metrics_vol14_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol14_14[1], vol14_14_se_val)
+metrics_vol14_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol14_14[2], vol14_14_se_test)
+
+pd.concat([metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_14[0][-500:], vol14_14[1], vol14_14[2], vol14_14_se, vol14_14_se_val, vol14_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[0], smoothing_level = best_param)
+vol14_21_se = model.smooth()
+
+metrics_vol14_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol14_21[0], vol14_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_21[1], smoothing_level = best_param)
+vol14_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_21[2], smoothing_level = best_param)
+vol14_21_se_test = model.smooth()
+
+metrics_vol14_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol14_21[1], vol14_21_se_val)
+metrics_vol14_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol14_21[2], vol14_21_se_test)
+
+pd.concat([metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_21[0][-500:], vol14_21[1], vol14_21[2], vol14_21_se, vol14_21_se_val, vol14_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[0], smoothing_level = best_param)
+vol14_28_se = model.smooth()
+
+metrics_vol14_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol14_28[0], vol14_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol14_28[1], smoothing_level = best_param)
+vol14_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol14_28[2], smoothing_level = best_param)
+vol14_28_se_test = model.smooth()
+
+metrics_vol14_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol14_28[1], vol14_28_se_val)
+metrics_vol14_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol14_28[2], vol14_28_se_test)
+
+pd.concat([metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol14_28[0][-500:], vol14_28[1], vol14_28[2], vol14_28_se, vol14_28_se_val, vol14_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol14_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol14_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol14_d = pd.concat([
+    metrics_vol14_7, metrics_vol14_7_val, metrics_vol14_7_test,
+    metrics_vol14_14, metrics_vol14_14_val, metrics_vol14_14_test,
+    metrics_vol14_21, metrics_vol14_21_val, metrics_vol14_21_test,
+    metrics_vol14_28, metrics_vol14_28_val, metrics_vol14_28_test
+])
+```
+
+#### Volatilidad $\omega = 21$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol21_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[0], smoothing_level = best_param)
+vol21_7_se = model.smooth()
+
+metrics_vol21_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol21_7[0], vol21_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_7[1], smoothing_level = best_param)
+vol21_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_7[2], smoothing_level = best_param)
+vol21_7_se_test = model.smooth()
+
+metrics_vol21_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol21_7[1], vol21_7_se_val)
+metrics_vol21_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol21_7[2], vol21_7_se_test)
+
+pd.concat([metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_7[0][-500:], vol21_7[1], vol21_7[2], vol21_7_se, vol21_7_se_val, vol21_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[0], smoothing_level = best_param)
+vol21_14_se = model.smooth()
+
+metrics_vol21_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol21_14[0], vol21_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_14[1], smoothing_level = best_param)
+vol21_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_14[2], smoothing_level = best_param)
+vol21_14_se_test = model.smooth()
+
+metrics_vol21_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol21_14[1], vol21_14_se_val)
+metrics_vol21_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol21_14[2], vol21_14_se_test)
+
+pd.concat([metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_14[0][-500:], vol21_14[1], vol21_14[2], vol21_14_se, vol21_14_se_val, vol21_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[0], smoothing_level = best_param)
+vol21_21_se = model.smooth()
+
+metrics_vol21_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol21_21[0], vol21_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_21[1], smoothing_level = best_param)
+vol21_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_21[2], smoothing_level = best_param)
+vol21_21_se_test = model.smooth()
+
+metrics_vol21_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol21_21[1], vol21_21_se_val)
+metrics_vol21_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol21_21[2], vol21_21_se_test)
+
+pd.concat([metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_21[0][-500:], vol21_21[1], vol21_21[2], vol21_21_se, vol21_21_se_val, vol21_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[0], smoothing_level = best_param)
+vol21_28_se = model.smooth()
+
+metrics_vol21_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol21_28[0], vol21_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol21_28[1], smoothing_level = best_param)
+vol21_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol21_28[2], smoothing_level = best_param)
+vol21_28_se_test = model.smooth()
+
+metrics_vol21_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol21_28[1], vol21_28_se_val)
+metrics_vol21_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol21_28[2], vol21_28_se_test)
+
+pd.concat([metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol21_28[0][-500:], vol21_28[1], vol21_28[2], vol21_28_se, vol21_28_se_val, vol21_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol21_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol21_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol21_d = pd.concat([
+    metrics_vol21_7, metrics_vol21_7_val, metrics_vol21_7_test,
+    metrics_vol21_14, metrics_vol21_14_val, metrics_vol21_14_test,
+    metrics_vol21_21, metrics_vol21_21_val, metrics_vol21_21_test,
+    metrics_vol21_28, metrics_vol21_28_val, metrics_vol21_28_test
+])
+```
+
+#### Volatilidad $\omega = 28$
+
+##### $\tau = 7$ 
+
+``` {python}
+results = []
+for param in params:
+    model = ExponentialSmoothing(vol28_7[0], smoothing_level = param)
+    yt = model.smooth()
+    eval_ = model.evaluate(yt)
+    eval_['λ'] = param
+    results.append(eval_)
+
+results = pd.concat(results, ignore_index = True)
+results
+```
+
+``` {python}
+best_param = params[results['MAE'].idxmin()]
+
+plt.plot(params, results['MAE'], marker = 'o', linestyle = '-')
+plt.title('$MAE$ v.s. $\lambda$')
+plt.xlabel('$\lambda$')
+plt.ylabel('$MAE$')
+plt.axvline(x = best_param, color = 'red', linestyle = '--', label = f'Best λ = {best_param:.2f}')
+plt.legend()
+plt.show()
+```
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[0], smoothing_level = best_param)
+vol28_7_se = model.smooth()
+
+metrics_vol28_7 = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'train τ = 7', vol28_7[0], vol28_7_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_7[1], smoothing_level = best_param)
+vol28_7_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_7[2], smoothing_level = best_param)
+vol28_7_se_test = model.smooth()
+
+metrics_vol28_7_val = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'val τ = 7', vol28_7[1], vol28_7_se_val)
+metrics_vol28_7_test = model.residuals('Simple Exponential Smoothing - Price: τ = 7', 'MAE', 'test τ = 7', vol28_7[2], vol28_7_se_test)
+
+pd.concat([metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_7[0][-500:], vol28_7[1], vol28_7[2], vol28_7_se, vol28_7_se_val, vol28_7_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_7.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_7.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 7'
+>
+</iframe>
+```
+
+##### $\tau = 14$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[0], smoothing_level = best_param)
+vol28_14_se = model.smooth()
+
+metrics_vol28_14 = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'train τ = 14', vol28_14[0], vol28_14_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_14[1], smoothing_level = best_param)
+vol28_14_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_14[2], smoothing_level = best_param)
+vol28_14_se_test = model.smooth()
+
+metrics_vol28_14_val = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'val τ = 14', vol28_14[1], vol28_14_se_val)
+metrics_vol28_14_test = model.residuals('Simple Exponential Smoothing - Price: τ = 14', 'MAE', 'test τ = 14', vol28_14[2], vol28_14_se_test)
+
+pd.concat([metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_14[0][-500:], vol28_14[1], vol28_14[2], vol28_14_se, vol28_14_se_val, vol28_14_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_14.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_14.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 14'
+>
+</iframe>
+```
+
+##### $\tau = 21$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[0], smoothing_level = best_param)
+vol28_21_se = model.smooth()
+
+metrics_vol28_21 = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'train τ = 21', vol28_21[0], vol28_21_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_21[1], smoothing_level = best_param)
+vol28_21_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_21[2], smoothing_level = best_param)
+vol28_21_se_test = model.smooth()
+
+metrics_vol28_21_val = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'val τ = 21', vol28_21[1], vol28_21_se_val)
+metrics_vol28_21_test = model.residuals('Simple Exponential Smoothing - Price: τ = 21', 'MAE', 'test τ = 21', vol28_21[2], vol28_21_se_test)
+
+pd.concat([metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_21[0][-500:], vol28_21[1], vol28_21[2], vol28_21_se, vol28_21_se_val, vol28_21_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_21.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_21.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 21'
+>
+</iframe>
+```
+
+##### $\tau = 28$ 
+
+A continuación, evaluaremos los residuales del pronóstico.
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[0], smoothing_level = best_param)
+vol28_28_se = model.smooth()
+
+metrics_vol28_28 = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'train τ = 28', vol28_28[0], vol28_28_se, show_info = True)
+```
+
+Ahora, veamos el gráfico de nuestras predicciones para la validación y el test
+
+``` {python}
+model = ExponentialSmoothing(vol28_28[1], smoothing_level = best_param)
+vol28_28_se_val = model.smooth()
+
+model = ExponentialSmoothing(vol28_28[2], smoothing_level = best_param)
+vol28_28_se_test = model.smooth()
+
+metrics_vol28_28_val = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'val τ = 28', vol28_28[1], vol28_28_se_val)
+metrics_vol28_28_test = model.residuals('Simple Exponential Smoothing - Price: τ = 28', 'MAE', 'test τ = 28', vol28_28[2], vol28_28_se_test)
+
+pd.concat([metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test])
+```
+
+``` {python}
+#| output: false
+fig = model.plot_preds(vol28_28[0][-500:], vol28_28[1], vol28_28[2], vol28_28_se, vol28_28_se_val, vol28_28_se_test)
+fig.show()
+```
+
+``` {python}
+#| echo: false
+fig.write_html('graphs/plot_preds_vol28_28.html')
+```
+
+``` {=html}
+<iframe
+    src = 'graphs/plot_preds_vol28_28.html'
+    width = '730'
+    height = '400'
+    title = 'Visualización de las predicciones del precio con tau 28'
+>
+</iframe>
+```
+
+``` {python}
+metrics_vol28_d = pd.concat([
+    metrics_vol28_7, metrics_vol28_7_val, metrics_vol28_7_test,
+    metrics_vol28_14, metrics_vol28_14_val, metrics_vol28_14_test,
+    metrics_vol28_21, metrics_vol28_21_val, metrics_vol28_21_test,
+    metrics_vol28_28, metrics_vol28_28_val, metrics_vol28_28_test
+])
+```
